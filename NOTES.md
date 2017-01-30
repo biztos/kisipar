@@ -1,10 +1,45 @@
-# KISIPAR NOTES -- mainly to myself!
+# KISIPAR NOTES
+
+```go
+
+itemType := ds.Has(r.URL.Path)
+if (itemType == kisipar.NoItem) {
+    http.NotFound(w,r)
+    return
+}
+switch itemType {
+    case kisipar.PageItem:
+        p, err := ds.Page(r.URL.Path)
+        // serve page or error
+    default:
+        panic("unknown item type: " + itemType)
+}
+
+```
+
+## GOALS
+
+### Abstract Data Source
+
+Three types implemented at start:
+
+1. Virtual (also used for testing)
+2. FileSystem
+3. Whatever I use for real data.
+
+### Multiple Sites from One Executable
+
+
+### Caching of Known Paths
+
+### Still Support "folder full of Markdown files" story
 
 ## Layout
 
 Use "lots of files in package" as that seems to be the norm.
 
 Try to reduce the code footprint!
+
 
 
 ## Generations

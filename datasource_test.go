@@ -19,7 +19,7 @@ func TestInterfaceConformity(t *testing.T) {
 	var f = func(ds kisipar.DataSource) {
 		t.Log(ds)
 	}
-	f(&kisipar.FileDataSource())
+	f(&kisipar.VirtualDataSource{})
 
 }
 
