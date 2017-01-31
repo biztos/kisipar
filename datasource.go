@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 
 	// Third-party packages:
@@ -171,16 +172,23 @@ func (p *StandardPage) Updated() time.Time {
 	return p.updated
 }
 
-// Meta retuns the full Meta Map.
+// Meta retuns the full Meta Map.  It may be nil.
 func (p *StandardPage) Meta() map[string]interface{} {
 	return p.meta
 }
 
 // MetaString returns a string value from the page's Meta Map for the given
 // key.  Lookup is case-sensitive.  The value is stringified per %v in
-// fmt.Sprintf. If the mapped value is nil then the empty string is returned.
+// fmt.Sprintf. If the mapped value or the map itself is nil then the empty
+// string is returned.
 func (p *StandardPage) MetaString(key string) string {
+	if p.meta == nil {
+		return ""
+	}
 	val := p.meta[key]
+	if val == nil {
+		return ""
+	}
 	return fmt.Sprintf("%v", val)
 }
 
@@ -188,9 +196,12 @@ func (p *StandardPage) MetaString(key string) string {
 // the value is already a []string, that is returned; if it is a slice then
 // each value is stringified as in MetaString and that slice of strings
 // returned; if it is a single value, that value is stringified via
-// MetaString and returned in a slice of one; and if the value is nil an
-// empty slice is returned.
+// MetaString and returned in a slice of one; and if the value is nil (or the
+// map itself is nil) an empty slice is returned.
 func (p *StandardPage) MetaStrings(key string) []string {
+	if p.meta == nil {
+		return []string{}
+	}
 	val := p.meta[key]
 	if val == nil {
 		return []string{}
@@ -229,74 +240,106 @@ func NewStandardPage(id, title string, tags []string, created time.Time,
 	}
 }
 
-// StandardPageFromYaml returns a pointer to an initialized StandardPage
-// with its Id, Title, and Tags set from meta using the MetaString and
-// MetaStrings methods; and the Created and Updated values set if they are
-// present in meta and are of type time.Time. These should be keyed in
-// lowercase:
+// StandardPageFromData returns a pointer to a StandardPage with its internal
+// properties set according to the key-value pairs in the provided data map d.
+// All properties are optional, and unknown properties are ignored, allowing
+// the data map to be used for other things.  An error is returned if the
+// value has the wrong type.
+//
+// Keys should be lowercase:
 //
 //  map[string]interface{}{
 //      "id": "possibly-unique",
 //      "title": "Hello World",
 //      "tags": []string{"foo","bar"},
 //      "created": time.Now(),
+//      "updated": time.Now(),
+//      "meta": map[string]interface{}{"foo":"bar"},
 //  }
-func StandardPageFromYaml(html string, meta map[string]interface{}) *StandardPage {
+func StandardPageFromData(d map[string]interface{}) (*StandardPage, error) {
 
-	p := &StandardPage{
-		meta: meta,
-		html: html,
-	}
-
-	p.id = p.MetaString("id")
-	p.title = p.MetaString("title")
-	p.tags = p.MetaStrings("tags")
-
-	if val := meta["created"]; val != nil {
-		if t, ok := val.(time.Time); ok {
-			p.created = t
+	p := &StandardPage{}
+	for k, v := range d {
+		switch k {
+		case "id":
+			if val, ok := v.(string); ok {
+				p.id = val
+			} else {
+				return nil, wrongTypeError(k, v, "string")
+			}
+		case "title":
+			if val, ok := v.(string); ok {
+				p.title = val
+			} else {
+				return nil, wrongTypeError(k, v, "string")
+			}
+		case "tags":
+			if val, ok := v.([]string); ok {
+				p.tags = val
+			} else {
+				return nil, wrongTypeError(k, v, "string slice")
+			}
+		case "created":
+			if val, ok := v.(time.Time); ok {
+				p.created = val
+			} else {
+				return nil, wrongTypeError(k, v, "Time")
+			}
+		case "updated":
+			if val, ok := v.(time.Time); ok {
+				p.updated = val
+			} else {
+				return nil, wrongTypeError(k, v, "Time")
+			}
+		case "meta":
+			if val, ok := v.(map[string]interface{}); ok {
+				p.meta = val
+			} else {
+				return nil, wrongTypeError(k, v, "string-interface map")
+			}
+		default:
+			// Ignore unknown keys, they're harmless.
 		}
-	}
-	if val := meta["udated"]; val != nil {
-		if t, ok := val.(time.Time); ok {
-			p.updated = t
-		}
+
 	}
 
-	return p
-
+	return p, nil
 }
 
-// VirtualDataSource is a DataSource that exists entirely in memory.  It
-// is primarily useful for testing, but might have other uses as well.
-// (What might those be? Dynamically creating a site based on read-once data?
-// Making a placeholder that exists entirely as a config file? Remotely
-// updating a small site via an API?)
-type VirtualDataSource struct {
-	// or just... items map[string]interface{}? We add/delete via api...
-	pages    map[string]*StandardPage
-	data     map[string]*StandardPage
-	files    map[string]*StandardPage
-	redirs   map[string]*StandardPage
-	handlers map[string]*StandardPage
-	// TODO: templates!
-	created time.Time
+func wrongTypeError(k string, v interface{}, want string) error {
+	return fmt.Errorf("Wrong type for %s: %T not %s", k, v, want)
 }
 
-// NewVirtualDataSource returns an empty VirtualDataSource to be populated
-// with the AddData and AddPage methods.
-func NewVirtualDataSource() *VirtualDataSource {
-	return &VirtualDataSource{
-		pages:    map[string]*StandardPage{},
-		data:     map[string]*StandardPage{},
-		files:    map[string]*StandardPage{},
-		redirs:   map[string]*StandardPage{},
-		handlers: map[string]*StandardPage{},
-		created:  time.Now(),
+// StandardDataSource is an opaque DataSource that exists entirely in memory.
+// It can be used as the base for any other type of DataSource that does not
+// need special features.
+type StandardDataSource struct {
+	items     map[string]interface{}
+	modtimes  map[string]time.Time
+	templates *template.Template
+	created   time.Time
+	updated   time.Time
+	mutex     sync.RWMutex
+}
+
+// NewStandardDataSource returns an empty StandardDataSource to be populated
+// via AddPage et al.  Directly creating a StandardDataSource may lead to
+// runtime errors in its methods; use this function instead.
+func NewStandardDataSource() *StandardDataSource {
+	return &StandardDataSource{
+		items:   map[string]interface{}{},
+		created: time.Now(),
+		updated: time.Now(),
+		mutex:   sync.RWMutex{},
 	}
 }
 
-// VirtualDataSourceFromYaml returns a VirtualDataSource with its pages and
+// AddPage adds a Page to the StandardDataSource at the request path
+// rpath. If any other object exists at that path it will be overwritten.
+// It is safe for concurrent use.
+// func (ds *StandardDataSource) AddPage(p Page)
+
+// StandardDataSourceFromYaml returns a StandardDataSource with its pages and
 // data read from the supplied yaml string.  The structure should be:
 //    pages:
 //      /path/to/foo:
@@ -304,14 +347,14 @@ func NewVirtualDataSource() *VirtualDataSource {
 //
 // This is useful for testing and for placeholder and/or generated sites
 // with text-only content.
-func VirtualDataSourceFromYaml(in string) (*VirtualDataSource, error) {
+func StandardDataSourceFromYaml(in string) (*StandardDataSource, error) {
 
 	meta := map[string]interface{}{}
 	err := yaml.Unmarshal([]byte(in), &meta)
 	if err != nil {
 		return nil, err
 	}
-	ds := NewVirtualDataSource()
+	ds := NewStandardDataSource()
 
 	// TODO: pages, etc... all items...
 
@@ -319,58 +362,58 @@ func VirtualDataSourceFromYaml(in string) (*VirtualDataSource, error) {
 }
 
 // String returns a log-friendly description of the DataSource.
-func (ds *VirtualDataSource) String() string {
-	return fmt.Sprintf("<VirtualDataSource: %d pages, %d data>",
-		len(ds.pages), len(ds.data))
+func (ds *StandardDataSource) String() string {
+	return fmt.Sprintf("<StandardDataSource with %d items, updated %s>",
+		len(ds.items), ds.updated)
 }
 
 // Has returns the ItemType of the path within the DataSource.
-func (ds *VirtualDataSource) Has(rpath string) ItemType {
+func (ds *StandardDataSource) Has(rpath string) ItemType {
 	//
 	return NoItem
 }
 
 // GetPage returns a Page if available from the DataSource; an error if not.
-func (ds *VirtualDataSource) GetPage(rpath string) (Page, error) {
+func (ds *StandardDataSource) GetPage(rpath string) (Page, error) {
 	return nil, ErrNotExist
 }
 
 // GetData returns a Data if available from the DataSource; an error if not.
-func (ds *VirtualDataSource) GetData(rpath string) (Data, error) {
+func (ds *StandardDataSource) GetData(rpath string) (Data, error) {
 	return nil, ErrNotExist
 }
 
 // GetFile returns a File if available from the DataSource; an error if not.
-func (ds *VirtualDataSource) GetFile(rpath string) (File, error) {
+func (ds *StandardDataSource) GetFile(rpath string) (File, error) {
 	return nil, ErrNotExist
 }
 
 // GetRedir returns a Redir if available from the DataSource; an error if not.
-func (ds *VirtualDataSource) GetRedir(rpath string) (Redir, error) {
+func (ds *StandardDataSource) GetRedir(rpath string) (Redir, error) {
 	return nil, ErrNotExist
 }
 
 // GetHandler returns a Handler if available from the DataSource; an error if
 // not.
-func (ds *VirtualDataSource) GetHandler(rpath string) (Handler, error) {
+func (ds *StandardDataSource) GetHandler(rpath string) (Handler, error) {
 	return nil, ErrNotExist
 }
 
 // GetPages returns a slice of Page items whose paths have the given prefix,
 // or ErrNotExist if none have.
-func (ds *VirtualDataSource) GetPages(rpath string) ([]Page, error) {
+func (ds *StandardDataSource) GetPages(rpath string) ([]Page, error) {
 	return nil, ErrNotExist
 }
 
 // Template compiles and returns the template collection if it has changed
 // since last.  If it has not, ErrNotModified is returned.
-func (ds *VirtualDataSource) Template(last time.Time) (*template.Template, error) {
+func (ds *StandardDataSource) Template(last time.Time) (*template.Template, error) {
 	return nil, ErrNotModified
 }
 
 // TemplateFor returns the template to be used for the given path, or an
 // error (possibly ErrNotExist, which means use the default).
-func (ds *VirtualDataSource) TemplateFor(rpath string) (*template.Template, error) {
+func (ds *StandardDataSource) TemplateFor(rpath string) (*template.Template, error) {
 	return nil, ErrNotExist
 }
 

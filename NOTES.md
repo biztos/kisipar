@@ -1,5 +1,20 @@
 # KISIPAR NOTES
 
+**CHANGE INTERFACE NAMES TO -ER STYLE!**
+
+DataSource
+    Provider
+    DataProvider
+    
+Page
+    Contenter
+
+Default instead of Standard?
+
+DefaultProvider
+
+**NO MORE HAS, stupid if ds has to take round trip every time**
+    
 ```go
 
 itemType := ds.Has(r.URL.Path)
@@ -34,13 +49,19 @@ Three types implemented at start:
 
 ### Still Support "folder full of Markdown files" story
 
-## Layout
+## Layout & Code &c.
 
 Use "lots of files in package" as that seems to be the norm.
 
 Try to reduce the code footprint!
 
+Use sync.WaitGroup for the multi-site logic
 
+Use standard things with overrides where possible, so e.g. DefaultMux can
+be used, we just set it to our own if needed (or better yet, don't, and
+let someone else if they need to).
+
+Logger, ditto.  What else?
 
 ## Generations
 

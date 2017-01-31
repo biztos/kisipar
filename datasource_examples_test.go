@@ -8,15 +8,12 @@ import (
 	"github.com/biztos/kisipar"
 )
 
-func ExampleVirtualDataSource() {
+func ExampleStandardDataSource() {
 
-	ds, err := kisipar.VirtualDataSourceFromYaml("# nothing yet")
+	ds, err := kisipar.StandardDataSourceFromYaml("# nothing yet")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	fmt.Printf("%v", ds)
-
-	// Output:
-	// <VirtualDataSource: 0 pages, 0 data>
 
 }
