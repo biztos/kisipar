@@ -171,6 +171,11 @@ func (p *StandardPage) Updated() time.Time {
 	return p.updated
 }
 
+// Meta retuns the full Meta Map.
+func (p *StandardPage) Meta() map[string]interface{} {
+	return p.meta
+}
+
 // MetaString returns a string value from the page's Meta Map for the given
 // key.  Lookup is case-sensitive.  The value is stringified per %v in
 // fmt.Sprintf. If the mapped value is nil then the empty string is returned.
