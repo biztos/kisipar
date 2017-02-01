@@ -1,4 +1,4 @@
-// datasource_examples_test.go
+// standardprovider_examples_test.go
 
 package kisipar_test
 
@@ -8,9 +8,9 @@ import (
 	"github.com/biztos/kisipar"
 )
 
-func ExampleStandardDataSource() {
+func ExampleStandardProvider() {
 
-	ds, err := kisipar.StandardDataSourceFromYaml("# nothing yet")
+	ds, err := kisipar.StandardProviderFromYaml("# nothing yet")
 	if err != nil {
 		fmt.Println(err.Error())
 	}

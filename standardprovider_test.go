@@ -1,4 +1,4 @@
-// datasource_test.go
+// standardprovider_test.go
 
 package kisipar_test
 
@@ -20,10 +20,10 @@ import (
 func Test_InterfaceConformity(t *testing.T) {
 
 	// This will crash if anything doesn't match.
-	var f = func(ds kisipar.DataSource) {
+	var f = func(ds kisipar.Provider) {
 		t.Log(ds)
 	}
-	f(&kisipar.StandardDataSource{})
+	f(&kisipar.StandardProvider{})
 
 }
 
@@ -42,7 +42,6 @@ func Test_NewStandardPage(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
-		"foo-id",                                // id
 		"The Foo",                               // title
 		[]string{"boo", "hoo"},                  // tags
 		time.Unix(0, 0),                         // created
@@ -50,7 +49,6 @@ func Test_NewStandardPage(t *testing.T) {
 		map[string]interface{}{"helo": "WORLD"}, // meta
 	)
 
-	assert.Equal("foo-id", p.Id(), "Id")
 	assert.Equal("The Foo", p.Title(), "Title")
 	assert.Equal([]string{"boo", "hoo"}, p.Tags(), "Tags")
 	assert.Equal(time.Unix(0, 0), p.Created(), "Created")
@@ -77,7 +75,6 @@ func Test_StandardPageFromData(t *testing.T) {
 
 	p, err := kisipar.StandardPageFromData(input)
 	if assert.Nil(err, "no error") {
-		assert.Equal("possibly-unique", p.Id(), "Id")
 		assert.Equal("Hello World", p.Title(), "Title")
 		assert.Equal([]string{"foo", "bar"}, p.Tags(), "Tags")
 		assert.Equal(cr, p.Created(), "Created")
@@ -92,7 +89,6 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	input := map[string]interface{}{
-		"id":      "possibly-unique",
 		"title":   "Hello World",
 		"tags":    []string{"foo", "bar"},
 		"created": time.Time{},
@@ -101,7 +97,6 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 	}
 
 	tStr := map[string]string{
-		"id":      "string",
 		"title":   "string",
 		"tags":    "string slice",
 		"created": "Time",
@@ -140,7 +135,6 @@ func Test_StandardPageFromData_EmptyData(t *testing.T) {
 
 	p, err := kisipar.StandardPageFromData(input)
 	if assert.Nil(err, "no error") {
-		assert.Zero("", p.Id(), "Id")
 		assert.Zero("", p.Title(), "Title")
 		assert.Zero(p.Tags(), "Tags")
 		assert.Zero(p.Created(), "Created")
@@ -155,7 +149,6 @@ func Test_StandardPage_MetaString(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
-		"foo-id",               // id
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
 		time.Unix(0, 0),        // created
@@ -187,7 +180,6 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
-		"foo-id",               // id
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
 		time.Unix(0, 0),        // created
