@@ -227,12 +227,40 @@ func wrongTypeError(k string, v interface{}, want string) error {
 	return fmt.Errorf("Wrong type for %s: %T not %s", k, v, want)
 }
 
-// StandardProvider is an opaque Provider that exists entirely in memory.
+// StandardFile is a simple implementation of the File interface.
+type StandardFile struct {
+	rpath string
+	fpath string
+}
+
+// Path returns the request path corresponding to the file.
+func (sf *StandardFile) Path() string { return sf.rpath }
+
+// FilePath returns the path to the file on the file system.
+func (sf *StandardFile) FilePath() string { return sf.fpath }
+
+// NewStandardFile returns a StandardFile for the given request path and
+// filesystem path.  The file itself is not checked.
+func NewStandardFile(rpath, fpath string) *StandardFile {
+	return &StandardFile{
+		rpath: rpath,
+		fpath: fpath,
+	}
+}
+
+// StandardProvider is a mostly- opaque Provider that exists entirely in
+// memory.
+//
 // It can be used as the base for any other type of Provider that does not
-// need special features.  Items are added using the interface-specific
-// Add* methods, and removed with the Remove method; these are safe for
-// use by concurrent goroutines.
+// need special features within the storage and retrieval of items.  Items
+// are added using the Add method, and removed with the Remove method; these
+// are safe for use by concurrent goroutines.
+//
+// The one exposed property, Meta, allows for other types based on this type
+// to store arbitrary data (typically a configuration).  It is not used by
+// any StandardProvider methods.
 type StandardProvider struct {
+	Meta     map[string]interface{}
 	items    map[string]Pather
 	modtimes map[string]time.Time
 	template *template.Template
@@ -275,14 +303,31 @@ func (sp *StandardProvider) Add(p Pather) {
 	sp.mutex.Unlock()
 }
 
-// StandardProviderFromYaml returns a StandardProvider with its pages and
-// data read from the supplied yaml string.  The structure should be:
+// StandardProviderFromYaml returns a StandardProvider with Pages, Content and
+// templates read from the supplied YAML string. The structure should be:
 //    pages:
 //      /path/to/foo:
-// TODO!
+//         title: I am Page Foo
+//         tags: [foo,yaml,demo]
+//         meta:
+//             foo: true
+//         html: |
+//              I am content!
+//              Multi-line!
+//    content:
+//      /path/to/bar.js:
+//         type: application/javascript
+//         content: |
+//              var x = 'Hello!';
+//              window.alert(x);
+//    templates:
+//      /some/template/path: |
+//          Hello {{ .Title }}
+//
+// In case of parse errors, the first error encountered is returned as-is.
 //
 // This is useful for testing and for placeholder and/or generated sites
-// with text-only content.
+// with simple content.  It is NOT recommended complex scenarios.
 func StandardProviderFromYaml(in string) (*StandardProvider, error) {
 
 	meta := map[string]interface{}{}
@@ -292,6 +337,10 @@ func StandardProviderFromYaml(in string) (*StandardProvider, error) {
 	}
 	p := NewStandardProvider()
 
+	// First deal with the pages, if any.
+	if pages := meta["pages"]; pages != nil {
+		// TODO
+	}
 	// TODO: pages, etc... all items...
 
 	return p, nil
@@ -408,31 +457,4 @@ func PageTemplate(tmpl *template.Template, p Page) *template.Template {
 	// ...
 	return nil
 
-}
-
-// TODO AND TO MOVE:
-type FileProviderConfig struct {
-	RootDir           string
-	TemplateDir       string
-	ExcludeExtensions []string
-	AutoRefresh       bool
-}
-
-// FileProvider is a Provider using only the file system.  It is the
-// recommended Provider to use for developing templates, and is also
-// useful for set-and-forget sites such as placeholders or smaller archives.
-// It is NOT recommended for large sites or any case where performance is key.
-type FileProvider struct {
-	root string
-}
-
-// NewFileProvider returns a FileProvider intialized from the given
-// root path.
-func NewFileProvider(root string) *FileProvider {
-	return &FileProvider{}
-}
-
-// String returns a log-friendly description of the Provider.
-func (p *FileProvider) String() string {
-	return fmt.Sprintf("<FileProvider in %s>", p.root)
 }
