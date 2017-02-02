@@ -11,11 +11,15 @@ import (
 	// Standard Library:
 	"fmt"
 	"html/template"
+	"io"
 	"os"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	// Own goodies:
+	"github.com/biztos/vebben"
 
 	// Third-party packages:
 	"gopkg.in/yaml.v2"
@@ -46,9 +50,46 @@ type StandardPageStub StandardPage
 // IsPage always returns true for a StandardPageStub.
 func (sps *StandardPageStub) IsPage() bool { return true }
 
+// StandardContent is an immutable piece of arbitrary content stored as a
+// string internally, with no metadata other than the ContentType.  It
+// implements the Content interface.
+type StandardContent struct {
+	rpath   string
+	ctype   string
+	mtime   time.Time
+	content string
+}
+
+// Path returns the request path of the content.
+func (c *StandardContent) Path() string {
+	return c.rpath
+}
+
+// ContentType returns the content-type of the content.  If it is the empty
+// string, the server will guess, which is likely to be inefficient.
+func (c *StandardContent) ContentType() string {
+	return c.ctype
+}
+
+// Reader returns an io.Reader created from the content string of the content
+// item.
+func (c *StandardContent) Reader() io.Reader {
+	return strings.NewReader(c.ctype)
+}
+
+// NewStandardContent returns a pointer to a StandardContent item with the
+// given request path, content type, content string.
+func NewStandardContent(rpath, ctype, content string) *StandardContent {
+	return &StandardContent{
+		rpath:   rpath,
+		ctype:   ctype,
+		content: content,
+	}
+}
+
 // StandardPage is an immutable Page that exists entirely in memory.
 type StandardPage struct {
-	path    string
+	rpath   string
 	title   string
 	tags    []string
 	created time.Time
@@ -60,7 +101,7 @@ type StandardPage struct {
 // Stub returns a StandardPageStub from the StandardPage.
 func (p *StandardPage) Stub() *StandardPageStub {
 	return &StandardPageStub{
-		path:    p.Path(),
+		rpath:   p.Path(),
 		title:   p.Title(),
 		tags:    p.Tags(),
 		created: p.Created(),
@@ -72,7 +113,7 @@ func (p *StandardPage) Stub() *StandardPageStub {
 
 // Path returns the canonical request path of the page.
 func (p *StandardPage) Path() string {
-	return p.path
+	return p.rpath
 }
 
 // Title returns the title of the page.
@@ -100,6 +141,12 @@ func (p *StandardPage) Updated() time.Time {
 // Meta retuns the full Meta Map.  It may be nil.
 func (p *StandardPage) Meta() map[string]interface{} {
 	return p.meta
+}
+
+// HTML retuns the rendered HTML of the StandardPage. It may be empty.
+// Note that StandardPage does not have any rendering logic of its own.
+func (p *StandardPage) HTML() string {
+	return p.html
 }
 
 // MetaString returns a string value from the page's Meta Map for the given
@@ -152,15 +199,18 @@ func (p *StandardPage) MetaStrings(key string) []string {
 
 // NewStandardPage returns a pointer to a StandardPage with its internal
 // properties set according to the arguments.
-func NewStandardPage(title string, tags []string, created time.Time,
-	updated time.Time, meta map[string]interface{}) *StandardPage {
+func NewStandardPage(rpath, title string, tags []string,
+	created, updated time.Time, meta map[string]interface{},
+	html string) *StandardPage {
 
 	return &StandardPage{
+		rpath:   rpath,
 		title:   title,
 		tags:    tags,
 		created: created,
 		updated: updated,
 		meta:    meta,
+		html:    html,
 	}
 }
 
@@ -295,7 +345,6 @@ func (sp *StandardProvider) Add(p Pather) {
 	}
 
 	sp.mutex.Lock()
-
 	sp.items[p.Path()] = p
 	sp.modtimes[p.Path()] = modtime
 	sp.updated = time.Now()
@@ -304,7 +353,7 @@ func (sp *StandardProvider) Add(p Pather) {
 }
 
 // StandardProviderFromYaml returns a StandardProvider with Pages, Content and
-// templates read from the supplied YAML string. The structure should be:
+// templates read from the supplied YAML input.  The YAML structure is:
 //    pages:
 //      /path/to/foo:
 //         title: I am Page Foo
@@ -324,26 +373,77 @@ func (sp *StandardProvider) Add(p Pather) {
 //      /some/template/path: |
 //          Hello {{ .Title }}
 //
+// The date format is not flexible.  Pages and Content with the same path
+// will be overwritten, most likely in a random order.
+//
 // In case of parse errors, the first error encountered is returned as-is.
 //
 // This is useful for testing and for placeholder and/or generated sites
 // with simple content.  It is NOT recommended complex scenarios.
-func StandardProviderFromYaml(in string) (*StandardProvider, error) {
+func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 
-	meta := map[string]interface{}{}
-	err := yaml.Unmarshal([]byte(in), &meta)
-	if err != nil {
+	type pageFromYaml struct {
+		Title   string
+		Tags    []string
+		Created time.Time
+		Updated time.Time
+		Meta    map[string]interface{}
+		Html    string
+	}
+	type contentFromYaml struct {
+		Type    string
+		Content string
+	}
+	type fromYaml struct {
+		Pages     map[string]*pageFromYaml
+		Content   map[string]*contentFromYaml
+		Templates map[string]string
+	}
+	target := fromYaml{}
+
+	if err := yaml.Unmarshal([]byte(src), &target); err != nil {
 		return nil, err
 	}
-	p := NewStandardProvider()
 
-	// First deal with the pages, if any.
-	if pages := meta["pages"]; pages != nil {
-		// TODO
+	sp := NewStandardProvider()
+	for path, item := range target.Pages {
+		p := NewStandardPage(
+			path,
+			item.Title,
+			item.Tags,
+			item.Created,
+			item.Updated,
+			item.Meta,
+			item.Html,
+		)
+
+		sp.Add(p)
 	}
-	// TODO: pages, etc... all items...
+	for path, item := range target.Content {
+		c := NewStandardContent(path, item.Type, item.Content)
+		sp.Add(c)
+	}
 
-	return p, nil
+	// Set up any templates.
+	if templates := target.Templates; templates != nil {
+		dt, err := templatesDefaultHtmlBytes()
+		if err == nil {
+			return nil, err
+		}
+		fm := vebben.NewFuncMap()
+		tmpl, err := template.New("").Funcs(fm).Parse(string(dt))
+		if err != nil {
+			panic("Default template not parsed: " + err.Error())
+		}
+		for path, src := range target.Templates {
+			if _, err := tmpl.New(path).Parse(src); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return sp, nil
+
 }
 
 // String returns a log-friendly description of the Provider.

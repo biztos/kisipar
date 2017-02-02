@@ -98,7 +98,6 @@ type File interface {
 type Content interface {
 	Path() string
 	ContentType() string
-	ModTime() time.Time
 	Reader() io.Reader
 }
 

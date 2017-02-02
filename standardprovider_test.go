@@ -42,11 +42,13 @@ func Test_NewStandardPage(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
+		"/foo",                                  // path
 		"The Foo",                               // title
 		[]string{"boo", "hoo"},                  // tags
 		time.Unix(0, 0),                         // created
 		time.Unix(10000, 0),                     // updated
 		map[string]interface{}{"helo": "WORLD"}, // meta
+		"<h1>foo</h1>",                          // html
 	)
 
 	assert.Equal("The Foo", p.Title(), "Title")
@@ -149,6 +151,7 @@ func Test_StandardPage_MetaString(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
+		"/foo",                 // path
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
 		time.Unix(0, 0),        // created
@@ -161,6 +164,9 @@ func Test_StandardPage_MetaString(t *testing.T) {
 			"nada": nil,
 			"ts":   time.Unix(0, 0),
 		},
+
+		// html
+		"<h1>helo</h1>",
 	)
 
 	expTs := time.Unix(0, 0).String() // includes local TS
@@ -180,6 +186,7 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 	assert := assert.New(t)
 
 	p := kisipar.NewStandardPage(
+		"/foo",                 // path
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
 		time.Unix(0, 0),        // created
@@ -193,6 +200,9 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 			"ts":      time.Unix(0, 0),
 			"mixed":   []interface{}{time.Unix(0, 0), 3.1415, "flubber"},
 		},
+
+		// html
+		"<h1>helo</h1>",
 	)
 
 	expTs := time.Unix(0, 0).String() // includes local TS
@@ -211,4 +221,58 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 	p = &kisipar.StandardPage{}
 	assert.Equal([]string{}, p.MetaStrings("any"),
 		"nil meta -> empty string slice")
+}
+
+func Test_StandardProviderFromYaml(t *testing.T) {
+
+	assert := assert.New(t)
+
+	yaml := `# I am YAML!
+pages:
+    /foo/bar:
+        title: I am the Foo Bar!
+        tags: [foo,bar]
+        created: 2016-01-02T15:04:05Z
+        updated: 2017-02-02T15:04:05Z
+        content: |
+            This is the foo, the bar, the baz and
+            the bat if you like.  For sanity's sake
+            let's not let it be Markdown.
+    /baz/bat:
+        title: The BazzerBat
+        tags: [foo,bazzers,badgers]
+content:
+    /js/goober.js:
+        type: application/javascript
+        content: |
+            window.alert('hello world');
+templates:
+    any/random/tmpl.html: |
+        <!doctype html>
+        <script src="/js/goober.js"></script>
+        <h1>Hello {{ .Title }}</h1>
+`
+
+	sp, err := kisipar.StandardProviderFromYaml(yaml)
+	if assert.Nil(err, "no error") {
+		assert.Regexp("<StandardProvider with 3 items, updated .*>",
+			sp.String(), "Stringifies as expected")
+
+		foo, err := sp.Get("/foo/bar")
+		if assert.Nil(err, "no err getting first item") {
+			assert.Implements((*kisipar.Page)(nil), foo, "it's a Page")
+		}
+		bat, err := sp.Get("/baz/bat")
+		if assert.Nil(err, "no err getting second item") {
+			assert.Implements((*kisipar.Page)(nil), bat, "it's a Page")
+		}
+		goob, err := sp.Get("/js/goober.js")
+		if assert.Nil(err, "no err getting third item") {
+			assert.Implements((*kisipar.Content)(nil), goob, "it's a Content")
+		}
+
+		tmpl := sp.Template()
+		assert.NotNil(tmpl, "Template not nil")
+
+	}
 }
