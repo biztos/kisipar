@@ -298,7 +298,7 @@ func NewStandardFile(rpath, fpath string) *StandardFile {
 	}
 }
 
-// StandardProvider is a mostly- opaque Provider that exists entirely in
+// StandardProvider is a mostly-opaque Provider that exists entirely in
 // memory.
 //
 // It can be used as the base for any other type of Provider that does not
@@ -330,26 +330,6 @@ func NewStandardProvider() *StandardProvider {
 		updated:  time.Now(),
 		mutex:    sync.RWMutex{},
 	}
-}
-
-// Add adds a Pather of any kind to the StandardProvider at its Path.  If any
-// other item exists at that path it will be overridden.  Add is safe for
-// concurrent use.
-func (sp *StandardProvider) Add(p Pather) {
-
-	modtime := time.Now()
-	if f, ok := p.(File); ok {
-		if info, err := os.Stat(f.FilePath()); err == nil {
-			modtime = info.ModTime()
-		}
-	}
-
-	sp.mutex.Lock()
-	sp.items[p.Path()] = p
-	sp.modtimes[p.Path()] = modtime
-	sp.updated = time.Now()
-
-	sp.mutex.Unlock()
 }
 
 // StandardProviderFromYaml returns a StandardProvider with Pages, Content and
@@ -426,8 +406,9 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 
 	// Set up any templates.
 	if templates := target.Templates; templates != nil {
+
 		dt, err := templatesDefaultHtmlBytes()
-		if err == nil {
+		if err != nil {
 			return nil, err
 		}
 		fm := vebben.NewFuncMap()
@@ -440,6 +421,7 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 				return nil, err
 			}
 		}
+		sp.SetTemplate(tmpl)
 	}
 
 	return sp, nil
@@ -448,8 +430,43 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 
 // String returns a log-friendly description of the Provider.
 func (sp *StandardProvider) String() string {
-	return fmt.Sprintf("<StandardProvider with %d items, updated %s>",
-		len(sp.items), sp.updated)
+
+	var s string
+	if len(sp.items) != 1 {
+		s = "s"
+	}
+	return fmt.Sprintf("<StandardProvider with %d item%s, updated %s>",
+		len(sp.items), s, sp.updated)
+}
+
+// Count returns the total number of items in the StandardProvider.
+func (sp *StandardProvider) Count() int {
+	return len(sp.items)
+}
+
+// Updated returns the last time at which the StandardProvider was updated.
+func (sp *StandardProvider) Updated() time.Time {
+	return sp.updated
+}
+
+// Add adds a Pather of any kind to the StandardProvider at its Path.  If any
+// other item exists at that path it will be overridden.  Add is safe for
+// concurrent use.
+func (sp *StandardProvider) Add(p Pather) {
+
+	modtime := time.Now()
+	if f, ok := p.(File); ok {
+		if info, err := os.Stat(f.FilePath()); err == nil {
+			modtime = info.ModTime()
+		}
+	}
+
+	sp.mutex.Lock()
+	sp.items[p.Path()] = p
+	sp.modtimes[p.Path()] = modtime
+	sp.updated = time.Now()
+
+	sp.mutex.Unlock()
 }
 
 // Get returns an item from the Provider if available; an error if not.
@@ -546,6 +563,14 @@ func (sp *StandardProvider) Template() *template.Template {
 // PageTemplate.
 func (sp *StandardProvider) TemplateFor(p Page) *template.Template {
 	return PageTemplate(sp.template, p)
+}
+
+// SetTemplate sets the internal template returned by Template.
+func (sp *StandardProvider) SetTemplate(tmpl *template.Template) {
+	sp.mutex.Lock()
+	sp.template = tmpl
+	sp.updated = time.Now()
+	sp.mutex.Unlock()
 }
 
 // TODO: MOVE TO TEMPLATES OR MAYBE TO PROVIDER:

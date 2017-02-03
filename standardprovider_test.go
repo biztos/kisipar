@@ -17,6 +17,11 @@ import (
 	"github.com/biztos/kisipar"
 )
 
+// This is presumably as minimal a working Pather as you can make:
+type TestPather string
+
+func (p TestPather) Path() string { return string(p) }
+
 func Test_InterfaceConformity(t *testing.T) {
 
 	// This will crash if anything doesn't match.
@@ -223,6 +228,16 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 		"nil meta -> empty string slice")
 }
 
+func Test_NewStandardProvider(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+
+	assert.Regexp("<StandardProvider with 0 items, updated .*>",
+		sp.String(), "Stringifies as expected")
+}
+
 func Test_StandardProviderFromYaml(t *testing.T) {
 
 	assert := assert.New(t)
@@ -255,9 +270,10 @@ templates:
 
 	sp, err := kisipar.StandardProviderFromYaml(yaml)
 	if assert.Nil(err, "no error") {
+
 		assert.Regexp("<StandardProvider with 3 items, updated .*>",
 			sp.String(), "Stringifies as expected")
-
+		return
 		foo, err := sp.Get("/foo/bar")
 		if assert.Nil(err, "no err getting first item") {
 			assert.Implements((*kisipar.Page)(nil), foo, "it's a Page")
@@ -275,4 +291,73 @@ templates:
 		assert.NotNil(tmpl, "Template not nil")
 
 	}
+}
+
+func Test_StandardProvider_Add(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+
+	assert.Equal(0, sp.Count(), "zero items")
+	u := sp.Updated()
+	sp.Add(TestPather("dummy"))
+	assert.Equal(1, sp.Count(), "one item")
+	assert.True(u.Before(sp.Updated()), "Updated moves forward")
+
+}
+
+func Test_StandardProvider_Get(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+	p := TestPather("dummy")
+	sp.Add(p)
+
+	got, err := sp.Get("dummy")
+	if assert.Nil(err, "no error getting item") {
+		assert.Equal(p, got, "got expected item")
+	}
+
+	got, err = sp.Get("not dummy")
+	if assert.NotNil(err, "error for missing item") {
+		assert.Equal(kisipar.ErrNotExist, err, "standard error")
+		// And obviously:
+		assert.True(kisipar.IsNotExist(err), "IsNotExist true for error")
+	}
+
+}
+
+func Test_StandardProvider_GetSince(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+	o := TestPather("older")
+	sp.Add(o)
+	ts := sp.Updated()
+	n := TestPather("newer")
+	sp.Add(n)
+
+	f := kisipar.NewStandardFile("file", "standardprovider_test.go")
+	sp.Add(f)
+
+	got, err := sp.GetSince("newer", ts)
+	if assert.Nil(err, "no error getting newer item") {
+		assert.Equal(n, got, "got expected item")
+	}
+
+	got, err = sp.GetSince("older", ts)
+	if assert.NotNil(err, "error for older item") {
+		assert.Equal(kisipar.ErrNotModified, err, "standard error")
+	}
+
+	// The file, however, is special: it's the newest thing added, but its
+	// mod time is (by definition) older than the running of this test.
+	got, err = sp.GetSince("file", ts)
+	if assert.NotNil(err, "error for file") {
+		assert.Equal(kisipar.ErrNotModified, err, "standard error")
+	}
+
 }
