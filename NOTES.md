@@ -1,40 +1,18 @@
 # KISIPAR NOTES
 
-**CHANGE INTERFACE NAMES TO -ER STYLE!**
 
-DataSource
-    Provider
-    DataProvider
-    
-Page
-    Contenter
-    
-    
-    Itemer
-    Responder
-    Contenter
-    
+**HOW THE FUCK DO WE HANDLE LISTS?**
 
-Default instead of Standard?
+Maybe there is a List item type?
 
-DefaultProvider
+Then it's up to the provider.  But isn't it better to have that logic
+in the templates?
 
-**NO MORE HAS, stupid if ds has to take round trip every time**
+
     
 ```go
 
-itemType := ds.Has(r.URL.Path)
-if (itemType == kisipar.NoItem) {
-    http.NotFound(w,r)
-    return
-}
-switch itemType {
-    case kisipar.PageItem:
-        p, err := ds.Page(r.URL.Path)
-        // serve page or error
-    default:
-        panic("unknown item type: " + itemType)
-}
+// tbd
 
 ```
 
@@ -92,3 +70,7 @@ https://godoc.org/golang.org/x/tools/cmd/stringer
     } else {
         ... get it as a file or what?
     }
+
+## Executable
+
+* Option to read from a YAML file, presumably -y or --yaml FILE.

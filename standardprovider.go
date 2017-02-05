@@ -71,19 +71,29 @@ func (c *StandardContent) ContentType() string {
 	return c.ctype
 }
 
-// Reader returns an io.Reader created from the content string of the content
-// item.
-func (c *StandardContent) Reader() io.Reader {
-	return strings.NewReader(c.ctype)
+// ModTime returns the modificatio time of the content. If it is the zero
+// time then the current time is returned.
+func (c *StandardContent) ModTime() time.Time {
+	if c.mtime.IsZero() {
+		return time.Now()
+	}
+	return c.mtime
+}
+
+// ReadSeeker returns an io.ReadSeeker created from the content string of the
+// content item.
+func (c *StandardContent) ReadSeeker() io.ReadSeeker {
+	return strings.NewReader(c.content)
 }
 
 // NewStandardContent returns a pointer to a StandardContent item with the
-// given request path, content type, content string.
-func NewStandardContent(rpath, ctype, content string) *StandardContent {
+// given request path, content type, content string and mod time.
+func NewStandardContent(rpath, ctype, content string, mtime time.Time) *StandardContent {
 	return &StandardContent{
 		rpath:   rpath,
 		ctype:   ctype,
 		content: content,
+		mtime:   mtime,
 	}
 }
 
@@ -400,7 +410,7 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 		sp.Add(p)
 	}
 	for path, item := range target.Content {
-		c := NewStandardContent(path, item.Type, item.Content)
+		c := NewStandardContent(path, item.Type, item.Content, time.Now())
 		sp.Add(c)
 	}
 
@@ -578,6 +588,7 @@ func PageTemplate(tmpl *template.Template, p Page) *template.Template {
 	if tmpl == nil {
 		return nil
 	}
+	return tmpl // TODO!
 	// var tpath string
 	// ...
 	return nil

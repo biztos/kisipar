@@ -93,12 +93,13 @@ type File interface {
 	FilePath() string
 }
 
-// Content is a Provider item used to serve arbitrary content from an through
+// Content is a Provider item used to serve arbitrary content through
 // http.ServeContent.
 type Content interface {
 	Path() string
 	ContentType() string
-	Reader() io.Reader
+	ModTime() time.Time
+	ReadSeeker() io.ReadSeeker
 }
 
 // Handler defines a custom handler for a response, providing for full
