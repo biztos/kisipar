@@ -17,10 +17,13 @@ import (
 	"github.com/biztos/kisipar"
 )
 
-// This is presumably as minimal a working Pather as you can make:
-type TestPather string
+// This is presumably as minimal a working Pather-Stubber as you can make:
+type TestPatherStubber string
 
-func (p TestPather) Path() string { return string(p) }
+func (p TestPatherStubber) Path() string       { return string(p) }
+func (p TestPatherStubber) IsPageStub() bool   { return false }
+func (p TestPatherStubber) TypeString() string { return "TestPatherStubber" }
+func (p TestPatherStubber) Stub() kisipar.Stub { return p }
 
 func Test_InterfaceConformity(t *testing.T) {
 
@@ -301,7 +304,7 @@ func Test_StandardProvider_Add(t *testing.T) {
 
 	assert.Equal(0, sp.Count(), "zero items")
 	u := sp.Updated()
-	sp.Add(TestPather("dummy"))
+	sp.Add(TestPatherStubber("dummy"))
 	assert.Equal(1, sp.Count(), "one item")
 	assert.True(u.Before(sp.Updated()), "Updated moves forward")
 
@@ -312,7 +315,7 @@ func Test_StandardProvider_Get(t *testing.T) {
 	assert := assert.New(t)
 
 	sp := kisipar.NewStandardProvider()
-	p := TestPather("dummy")
+	p := TestPatherStubber("dummy")
 	sp.Add(p)
 
 	got, err := sp.Get("dummy")
@@ -334,10 +337,10 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 	assert := assert.New(t)
 
 	sp := kisipar.NewStandardProvider()
-	o := TestPather("older")
+	o := TestPatherStubber("older")
 	sp.Add(o)
 	ts := sp.Updated()
-	n := TestPather("newer")
+	n := TestPatherStubber("newer")
 	sp.Add(n)
 
 	f := kisipar.NewStandardFile("file", "standardprovider_test.go")
@@ -358,6 +361,38 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 	got, err = sp.GetSince("file", ts)
 	if assert.NotNil(err, "error for file") {
 		assert.Equal(kisipar.ErrNotModified, err, "standard error")
+	}
+
+}
+
+func Test_StandardProvider_GetStub(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+	p := TestPatherStubber("dummy")
+	sp.Add(p)
+
+	got, err := sp.GetStub("dummy")
+	if assert.Nil(err, "no error getting item") {
+		assert.Equal(p, got, "got expected item")
+	}
+
+}
+
+func Test_StandardProvider_GetUnder(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+	sp.Add(TestPatherStubber("foo"))
+	sp.Add(TestPatherStubber("foodie"))
+	sp.Add(TestPatherStubber("foo/bar/baz"))
+	sp.Add(TestPatherStubber("foment"))
+
+	got, err := sp.GetUnder("foo")
+	if assert.Nil(err, "no error getting item") {
+		assert.Equal(3, len(got), "got expected number of items")
 	}
 
 }
