@@ -5,6 +5,7 @@
 // will be way easier to test from a virtual provider.
 // ** StandardAsset? **
 // ALSO: some concept of sort order for them, maybe?
+
 package kisipar
 
 import (
@@ -581,16 +582,4 @@ func (sp *StandardProvider) SetTemplate(tmpl *template.Template) {
 	sp.template = tmpl
 	sp.updated = time.Now()
 	sp.mutex.Unlock()
-}
-
-// TODO: MOVE TO TEMPLATES OR MAYBE TO PROVIDER:
-func PageTemplate(tmpl *template.Template, p Page) *template.Template {
-	if tmpl == nil {
-		return nil
-	}
-	return tmpl // TODO!
-	// var tpath string
-	// ...
-	return nil
-
 }
