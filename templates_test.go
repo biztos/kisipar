@@ -4,7 +4,6 @@ package kisipar_test
 
 import (
 	// Standard:
-	// "html/template"
 	"bytes"
 	"testing"
 

@@ -1,20 +1,23 @@
 # KISIPAR NOTES
 
-
-**HOW THE FUCK DO WE HANDLE LISTS?**
-
-Maybe there is a List item type?
-
-Then it's up to the provider.  But isn't it better to have that logic
-in the templates?
-
-
+    Maybe something like GetHost or Get(r *http.Request)?
     
-```go
+    Problem is that you might have a Provider that knows about
+    a bunch of hosts, and can't tell them apart by path alone.
+    (In that case it might also not work with the Request.)
+    
+    You can attach the host to the path but that fucks with the
+    template search unless you also have templates for each
+    host (you might).  Would need new default logic.
+    
+    The other thing is to have one Provider per Site but then
+    build the db provider such that it knows which host is which.
+    
+    mp,err := NewPgMultiProvider(config)
+    p, err := mp.HostProvider("example.com")
+    
+    Probably best that way right?
 
-// tbd
-
-```
 
 ## GOALS
 
