@@ -10,6 +10,7 @@ package kisipar
 
 import (
 	// Standard Library:
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -18,9 +19,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	// Own goodies:
-	"github.com/biztos/vebben"
 
 	// Third-party packages:
 	"gopkg.in/yaml.v2"
@@ -225,25 +223,42 @@ func NewStandardPage(rpath, title string, tags []string,
 	}
 }
 
-// StandardPageFromData returns a pointer to a StandardPage with its internal
-// properties set according to the key-value pairs in the provided data map d.
-// All properties are optional, and unknown properties are ignored, allowing
-// the data map to be used for other things.  An error is returned if the
-// value has the wrong type.
+// StandardPageFromData returns a pointer to a StandardPage with its
+// internal properties set according to the key-value pairs in the provided
+// data map m. All properties are optional except for path, and unknown
+// properties are ignored, allowing the data map to be used for other
+// things. An error is returned if any value has the wrong type, or if path
+// is either undefined or the empty string.
 //
 // Keys should be lowercase:
 //
 //  map[string]interface{}{
+//      "path": "/foo/bar",
 //      "title": "Hello World",
 //      "tags": []string{"foo","bar"},
 //      "created": time.Now(),
 //      "updated": time.Now(),
 //      "meta": map[string]interface{}{"foo":"bar"},
 //  }
-func StandardPageFromData(d map[string]interface{}) (*StandardPage, error) {
+func StandardPageFromData(m map[string]interface{}) (*StandardPage, error) {
 
 	p := &StandardPage{}
-	for k, v := range d {
+
+	path := m["path"]
+	if path == nil {
+		return nil, errors.New("path not set")
+	}
+	if val, ok := path.(string); ok {
+		p.rpath = val
+	} else {
+		return nil, wrongTypeError("path", path, "string")
+	}
+	if p.rpath == "" {
+		return nil, errors.New("path may not be an empty string")
+	}
+
+	// The rest are optional.
+	for k, v := range m {
 		switch k {
 		case "title":
 			if val, ok := v.(string); ok {
@@ -416,21 +431,10 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 	}
 
 	// Set up any templates.
-	if templates := target.Templates; templates != nil {
-
-		dt, err := templatesDefaultHtmlBytes()
+	if target.Templates != nil {
+		tmpl, err := TemplatesFromData(target.Templates)
 		if err != nil {
 			return nil, err
-		}
-		fm := vebben.NewFuncMap()
-		tmpl, err := template.New("").Funcs(fm).Parse(string(dt))
-		if err != nil {
-			panic("Default template not parsed: " + err.Error())
-		}
-		for path, src := range target.Templates {
-			if _, err := tmpl.New(path).Parse(src); err != nil {
-				return nil, err
-			}
 		}
 		sp.SetTemplate(tmpl)
 	}
@@ -562,16 +566,7 @@ func (sp *StandardProvider) Template() *template.Template {
 }
 
 // TemplateFor returns the template that should be used for the given
-// Page.  It may be nil.  Template-selection logic is up to the Provider,
-// and in this case it is very simple:
-//   * The "template" MetaString, or
-//   * The "Template" MetaString, or
-//   * The template with a matching path, or
-//   * The template with the longest matching basedir to the Page's basedir.
-//
-// Only internal templates are considered.  It is up to the handler to choose
-// among external templates, though the function is exposed for reuse: cf.
-// PageTemplate.
+// Page.  It is a convenience wrapper for the PageTemplate function.
 func (sp *StandardProvider) TemplateFor(p Page) *template.Template {
 	return PageTemplate(sp.template, p)
 }

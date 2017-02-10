@@ -74,6 +74,7 @@ func Test_StandardPageFromData(t *testing.T) {
 	cr := time.Unix(0, 0)
 	up := time.Now()
 	input := map[string]interface{}{
+		"path":           "/foo/bar",
 		"id":             "possibly-unique",
 		"title":          "Hello World",
 		"tags":           []string{"foo", "bar"},
@@ -99,6 +100,7 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 	assert := assert.New(t)
 
 	input := map[string]interface{}{
+		"path":    "/foo/bar",
 		"title":   "Hello World",
 		"tags":    []string{"foo", "bar"},
 		"created": time.Time{},
@@ -107,6 +109,7 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 	}
 
 	tStr := map[string]string{
+		"path":    "string",
 		"title":   "string",
 		"tags":    "string slice",
 		"created": "Time",
@@ -137,19 +140,33 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 
 }
 
+func Test_StandardPageFromData_MinimalData(t *testing.T) {
+
+	assert := assert.New(t)
+
+	input := map[string]interface{}{"path": "/foo/bar"}
+
+	p, err := kisipar.StandardPageFromData(input)
+	if assert.Nil(err, "no error") {
+		assert.Equal("/foo/bar", p.Path(), "Path")
+		assert.Zero("", p.Title(), "Title")
+		assert.Zero(p.Tags(), "Tags")
+		assert.Zero(p.Created(), "Created")
+		assert.Zero(p.Updated(), "Updated")
+		assert.Zero(p.Meta(), "Meta")
+	}
+
+}
+
 func Test_StandardPageFromData_EmptyData(t *testing.T) {
 
 	assert := assert.New(t)
 
 	input := map[string]interface{}{}
 
-	p, err := kisipar.StandardPageFromData(input)
-	if assert.Nil(err, "no error") {
-		assert.Zero("", p.Title(), "Title")
-		assert.Zero(p.Tags(), "Tags")
-		assert.Zero(p.Created(), "Created")
-		assert.Zero(p.Updated(), "Updated")
-		assert.Zero(p.Meta(), "Meta")
+	_, err := kisipar.StandardPageFromData(input)
+	if assert.Error(err, "error returned") {
+		assert.Equal("path not set", err.Error(), "error as expected")
 	}
 
 }
