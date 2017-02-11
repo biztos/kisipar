@@ -16,6 +16,15 @@ import (
 	"github.com/biztos/kisipar"
 )
 
+// Testability is part of the craft.  The bindata folks did us a fine service
+// but fell short here.
+func Test_CrutchUnderBindata(t *testing.T) {
+
+	assert := assert.New(t)
+
+	assert.NotPanics(kisipar.CrutchUnderBindata, "no panic")
+}
+
 func Test_Asset(t *testing.T) {
 
 	assert := assert.New(t)
@@ -131,23 +140,3 @@ func Test_RestoreAssets(t *testing.T) {
 
 	}
 }
-
-// func bindataRead(data []byte, name string) ([]byte, error) {
-// func (fi bindataFileInfo) Name() string {
-// func (fi bindataFileInfo) Size() int64 {
-// func (fi bindataFileInfo) Mode() os.FileMode {
-// func (fi bindataFileInfo) ModTime() time.Time {
-// func (fi bindataFileInfo) IsDir() bool {
-// func (fi bindataFileInfo) Sys() interface{} {
-// func templatesDefaultHtmlBytes() ([]byte, error) {
-// func templatesDefaultHtml() (*asset, error) {
-// func templatesIndexHtmlBytes() ([]byte, error) {
-// func templatesIndexHtml() (*asset, error) {
-//
-// func MustAsset(name string) []byte {
-// func AssetInfo(name string) (os.FileInfo, error) {
-// func AssetNames() []string {
-// func AssetDir(name string) ([]string, error) {
-// func RestoreAsset(dir, name string) error {
-// func RestoreAssets(dir, name string) error {
-// func _filePath(dir, name string) string {
