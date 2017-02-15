@@ -35,14 +35,13 @@ func TemplatesFromData(in map[string]string) (*template.Template, error) {
 	if in == nil {
 		return nil, errors.New("TemplatesFromData input may not be nil.")
 	}
-	tmpl, err := template.New("").Funcs(FuncMap()).Parse("")
-	if err != nil {
-		return nil, fmt.Errorf("Master template failed: %s", err.Error())
-	}
+
+	// In theory it would be impossible for this to throw an error:
+	tmpl, _ := template.New("").Funcs(FuncMap()).Parse("")
 
 	for path, src := range in {
 		if _, err := tmpl.New(path).Parse(src); err != nil {
-			return nil, fmt.Errorf("Template %s failed: %s", path, err.Error())
+			return nil, fmt.Errorf("Template %s failed: %v", path, err)
 		}
 	}
 	return tmpl, nil

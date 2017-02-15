@@ -346,8 +346,8 @@ type StandardProvider struct {
 }
 
 // NewStandardProvider returns an empty StandardProvider to be populated
-// via AddPage et al.  Directly creating a StandardProvider may lead to
-// runtime errors in its methop; use this function instead.
+// via Add.  Directly creating a StandardProvider may lead to runtime errors
+// in its methods; use this function instead.
 func NewStandardProvider() *StandardProvider {
 	return &StandardProvider{
 		items:    map[string]Pather{},
