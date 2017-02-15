@@ -60,27 +60,44 @@ pages:
     /:
         title: Kisipar from YAML
         html: |
-            Hello world!
+            <h2>Hello world!</h2>
+            <p>
+                Try <a href="/foo/bar">here</a>
+                or <a href="/baz/bat">here</a>,
+                or try a <a href="/nope">404</a>.
+            </p>
+            
     /foo/bar:
         title: I am the Foo Bar!
         tags: [foo,bar]
         created: 2016-01-02T15:04:05Z
         updated: 2017-02-02T15:04:05Z
-        content: |
+        html: |
             This is the foo, the bar, the baz and
             the bat if you like.  For sanity's sake
             let's not let it be Markdown.
+            You can always go <a href="/">back</a>.
     /baz/bat:
         title: The BazzerBat
         tags: [foo,bazzers,badgers]
+        meta:
+            template: any/random/tmpl.html
+        html: |
+            Baz to the bat!
+            Or go <a href="/">back</a>.
 content:
     /js/goober.js:
         type: application/javascript
         content: |
             window.alert('hello world');
 templates:
+    default.html: |
+        <!doctype html>
+        <h1>{{ .Title }}</h1>
+        <div>{{ .HTML }}</div>
     any/random/tmpl.html: |
         <!doctype html>
         <script src="/js/goober.js"></script>
         <h1>Hello {{ .Title }}</h1>
+        <div>{{ .HTML }}</div>
 `

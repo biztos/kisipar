@@ -473,3 +473,27 @@ func Test_PageTemplate_Default_NoSlashWithExtension(t *testing.T) {
 		}
 	}
 }
+
+func Test_PageTemplate_Default_TopOfSite(t *testing.T) {
+
+	assert := assert.New(t)
+
+	p, err := kisipar.StandardPageFromData(map[string]interface{}{
+		"path": "/",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	master, _ := kisipar.TemplatesFromData(map[string]string{
+		"default.html": "HERE AT DEFAULT",
+	})
+	tmpl := kisipar.PageTemplate(master, p)
+	if assert.NotNil(tmpl, "got template") {
+		assert.Equal("default.html", tmpl.Name(), "right template returned")
+		var b bytes.Buffer
+		if assert.Nil(tmpl.Execute(&b, nil), "executes without error") {
+			assert.Equal("HERE AT DEFAULT", b.String(), "content as expected")
+		}
+	}
+}

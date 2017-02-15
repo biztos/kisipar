@@ -154,8 +154,8 @@ func (p *StandardPage) Meta() map[string]interface{} {
 
 // HTML retuns the rendered HTML of the StandardPage. It may be empty.
 // Note that StandardPage does not have any rendering logic of its own.
-func (p *StandardPage) HTML() string {
-	return p.html
+func (p *StandardPage) HTML() template.HTML {
+	return template.HTML(p.html)
 }
 
 // MetaString returns a string value from the page's Meta Map for the given

@@ -123,15 +123,18 @@ func PageTemplate(tmpl *template.Template, p Page) *template.Template {
 		}
 	}
 
-	// An exact-ish match makes things easy.
-	if match := lookupPathVariations(tmpl, p.Path()); match != nil {
-		return match
-	}
+	if p.Path() != "/" {
 
-	// Otherwise, up we go!
-	for d := path.Dir(p.Path()); d != "/" && d != "" && d != "."; d = path.Dir(d) {
-		if match := lookupPathVariations(tmpl, d); match != nil {
+		// An exact-ish match makes things easy.
+		if match := lookupPathVariations(tmpl, p.Path()); match != nil {
 			return match
+		}
+
+		// Otherwise, up we go!
+		for d := path.Dir(p.Path()); d != "/" && d != "" && d != "."; d = path.Dir(d) {
+			if match := lookupPathVariations(tmpl, d); match != nil {
+				return match
+			}
 		}
 	}
 

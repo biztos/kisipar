@@ -123,7 +123,7 @@ type Page interface {
 	Meta() map[string]interface{} // Available metadata for the Page.
 	MetaString(string) string     // Return a Meta value as a string.
 	MetaStrings(string) []string  // Return a Meta value as a string slice.
-	HTML() string                 // Rendered HTML fragment of the Page.
+	HTML() template.HTML          // Rendered HTML fragment of the Page.
 }
 
 // Stub is included exclusively in lists (including lists of one).  The
