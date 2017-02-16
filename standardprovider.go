@@ -15,7 +15,6 @@ import (
 	"html/template"
 	"io"
 	"os"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -159,51 +158,22 @@ func (p *StandardPage) HTML() template.HTML {
 }
 
 // MetaString returns a string value from the page's Meta Map for the given
-// key.  Lookup is case-sensitive.  The value is stringified per %v in
-// fmt.Sprintf. If the mapped value or the map itself is nil then the empty
-// string is returned.
+// key.  Lookup is case-sensitive.  The MappedString function is used.
 func (p *StandardPage) MetaString(key string) string {
-	if p.meta == nil {
-		return ""
-	}
-	val := p.meta[key]
-	if val == nil {
-		return ""
-	}
-	return fmt.Sprintf("%v", val)
+	return MappedString(p.meta, key)
 }
 
-// MetaStrings returns a slice of string values from the page's Meta Map. If
-// the value is already a []string, that is returned; if it is a slice then
-// each value is stringified as in MetaString and that slice of strings
-// returned; if it is a single value, that value is stringified via
-// MetaString and returned in a slice of one; and if the value is nil (or the
-// map itself is nil) an empty slice is returned.
+// FlexMetaString returns a string value from the page's Meta Map for the
+// given key, checking case variations. The FlexMappedString function is
+// used.
+func (p *StandardPage) FlexMetaString(key string) string {
+	return FlexMappedString(p.meta, key)
+}
+
+// MetaStrings returns a slice of string values from the page's Meta Map,
+// using the MappedStrings function.
 func (p *StandardPage) MetaStrings(key string) []string {
-	if p.meta == nil {
-		return []string{}
-	}
-	val := p.meta[key]
-	if val == nil {
-		return []string{}
-	}
-	if s, ok := val.([]string); ok {
-		return s
-	}
-	switch reflect.TypeOf(val).Kind() {
-	case reflect.Slice:
-
-		slice := reflect.ValueOf(val)
-		s := make([]string, slice.Len())
-
-		for i := 0; i < slice.Len(); i++ {
-			s[i] = fmt.Sprintf("%v", slice.Index(i))
-		}
-		return s
-	default:
-		return []string{p.MetaString(key)}
-	}
-
+	return MappedStrings(p.meta, key)
 }
 
 // NewStandardPage returns a pointer to a StandardPage with its internal

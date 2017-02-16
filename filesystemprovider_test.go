@@ -114,3 +114,15 @@ func Test_FileSystemProvider_LoadContent_DirNotDir(t *testing.T) {
 		assert.Equal("Not a directory: README.md", err.Error())
 	}
 }
+
+func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{ContentDir: "test"}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	assert.Nil(err, "no error")
+}

@@ -10,6 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	// Third-party packages:
+	//	"gopkg.in/yaml.v2"
+
+	// Own stuff:
+	"github.com/biztos/frostedmd"
 )
 
 // FileSystemProviderConfig defines the configuration options for a
@@ -19,6 +25,7 @@ type FileSystemProviderConfig struct {
 	TemplateDir     string   // Templates, if any.
 	ExcludePrefixes []string // Ignore anything with these prefixes.
 	ExcludeSuffixes []string // Ignore anything with these suffixes.
+	Strict          bool     // Fail on Page metadata parsing errors.
 	AutoRefresh     bool     // Watch filesystem and refresh
 }
 
@@ -148,9 +155,8 @@ func (fsp *FileSystemProvider) LoadContent() error {
 	// We can't use the standard Add function because we need to lock
 	// everything long enough to replace all the items (i.e. remove things).
 	// Instead we have to build our items in place, then swap them.  Easy.
-
-	return fmt.Errorf("NOT YET -- walker not ready; config=%#v", config)
-	tmpl, _ := template.New("").Funcs(FuncMap()).Parse("")
+	mdparser := frostedmd.New()
+	items := map[string]Pather{}
 	walker := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -159,7 +165,7 @@ func (fsp *FileSystemProvider) LoadContent() error {
 			return nil
 		}
 
-		// It might be a link to a dir, or something missing...
+		// Watch for symlinks... though there must be a better way, no?
 		realInfo, err := os.Stat(path)
 		if err != nil {
 			return err
@@ -168,26 +174,40 @@ func (fsp *FileSystemProvider) LoadContent() error {
 			return nil
 		}
 
+		// We will keep it now, whatever it is.  For which we need its
+		// request-style path.
+		rpath := filepath.ToSlash(strings.TrimPrefix(path, config.ContentDir))
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext == ".md" {
 			// Markdown page.
+			b, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			res, err := mdparser.Parse(b)
+			if err != nil && config.Strict {
+				return err
+			}
+
+			// Get some things from the meta.
+			title := FlexMappedString(res.Meta, "title")
+			p, _ := StandardPageFromData(map[string]interface{}{
+				"path":  rpath,
+				"title": title,
+				// "tags":  []string{"foo", "bar"},
+				//  "created": time.Now(),
+				//  "updated": time.Now(),
+				"meta": res.Meta,
+			})
+			items[rpath] = p
+
 		} else if ext == ".yml" || ext == ".yaml" {
 			// YAML page.
 		} else {
-			// File to be treated as-is.
-		}
+			// File to be served as-is.
+			items[rpath] = NewStandardFile(rpath, path)
 
-		// Now the fun begins!
-		b, err := ioutil.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("Error reading %s: %v", path, err)
-		}
-
-		path = filepath.ToSlash(strings.TrimPrefix(path, config.ContentDir))
-		path = strings.TrimPrefix(path, string(filepath.Separator))
-
-		if _, err := tmpl.New(path).Parse(string(b)); err != nil {
-			return fmt.Errorf("Template %s failed: %v", path, err)
 		}
 
 		return nil
@@ -197,8 +217,6 @@ func (fsp *FileSystemProvider) LoadContent() error {
 	if err != nil {
 		return fmt.Errorf("Error walking %s: %v", config.ContentDir, err)
 	}
-
-	fsp.SetTemplate(tmpl)
 
 	return nil
 
