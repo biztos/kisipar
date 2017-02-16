@@ -397,7 +397,7 @@ func Test_StandardProvider_GetStub(t *testing.T) {
 
 }
 
-func Test_StandardProvider_GetUnder(t *testing.T) {
+func Test_StandardProvider_GetStubs(t *testing.T) {
 
 	assert := assert.New(t)
 
@@ -407,9 +407,7 @@ func Test_StandardProvider_GetUnder(t *testing.T) {
 	sp.Add(TestPatherStubber("foo/bar/baz"))
 	sp.Add(TestPatherStubber("foment"))
 
-	got, err := sp.GetUnder("foo")
-	if assert.Nil(err, "no error getting item") {
-		assert.Equal(3, len(got), "got expected number of items")
-	}
+	got := sp.GetStubs("foo")
+	assert.Equal(3, len(got), "got expected number of items")
 
 }

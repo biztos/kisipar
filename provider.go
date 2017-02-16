@@ -50,7 +50,8 @@ type Provider interface {
 	GetStub(string) (Stub, error)               // If one Stub needed.
 
 	// Batch requests:
-	GetUnder(prefix string) ([]Stub, error) // Fetch items under a prefix.
+	GetStubs(prefix string) []Stub // Fetch Stubs under a prefix.
+	GetAll(prefix string) []Pather // Fetch Stubs or raw items.
 
 	// TODO:
 	// GetTagged

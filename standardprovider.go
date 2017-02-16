@@ -15,6 +15,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -306,13 +307,14 @@ func NewStandardFile(rpath, fpath string) *StandardFile {
 // to store arbitrary data (typically a configuration).  It is not used by
 // any StandardProvider methods.
 type StandardProvider struct {
-	Meta     map[string]interface{}
-	items    map[string]Pather
-	modtimes map[string]time.Time
-	template *template.Template
-	created  time.Time
-	updated  time.Time
-	mutex    sync.RWMutex
+	Meta        map[string]interface{}
+	items       map[string]Pather
+	sortedpaths []string
+	modtimes    map[string]time.Time
+	template    *template.Template
+	created     time.Time
+	updated     time.Time
+	mutex       sync.RWMutex
 }
 
 // NewStandardProvider returns an empty StandardProvider to be populated
@@ -320,11 +322,12 @@ type StandardProvider struct {
 // in its methods; use this function instead.
 func NewStandardProvider() *StandardProvider {
 	return &StandardProvider{
-		items:    map[string]Pather{},
-		modtimes: map[string]time.Time{},
-		created:  time.Now(),
-		updated:  time.Now(),
-		mutex:    sync.RWMutex{},
+		items:       map[string]Pather{},
+		sortedpaths: []string{},
+		modtimes:    map[string]time.Time{},
+		created:     time.Now(),
+		updated:     time.Now(),
+		mutex:       sync.RWMutex{},
 	}
 }
 
@@ -445,11 +448,22 @@ func (sp *StandardProvider) Add(p Pather) {
 			modtime = info.ModTime()
 		}
 	}
+	rpath := p.Path()
 
 	sp.mutex.Lock()
-	sp.items[p.Path()] = p
-	sp.modtimes[p.Path()] = modtime
+	sp.items[rpath] = p
+	sp.modtimes[rpath] = modtime
 	sp.updated = time.Now()
+
+	// It seems like there should be an "add to sorted slice" function, no?
+	pos := sort.SearchStrings(sp.sortedpaths, rpath)
+	if pos == len(sp.sortedpaths) || sp.sortedpaths[pos] != rpath {
+		// OK, easy enough to implement one.  But really?  And write tests?
+		// TODO: either track that thing down in the docs, or write and test
+		// one under utils.go.
+		sp.sortedpaths = append(sp.sortedpaths, rpath)
+		sort.Strings(sp.sortedpaths)
+	}
 
 	sp.mutex.Unlock()
 }
@@ -505,27 +519,70 @@ func (sp *StandardProvider) GetStub(rpath string) (Stub, error) {
 
 }
 
-// GetUnder returns a slice of Stub items for everything "under" the given
+// GetStubs returns a slice of Stub items for everything "under" the given
 // prefix, i.e. everything with a path having the given prefix.  It is
 // usually wise to terminate the prefix with a slash, but this is up to the
 // template author.
 //
-// TODO: new tye for []Stub, an interface, something that can deal with
-// iterators and so on.  TBD really.
-func (sp *StandardProvider) GetUnder(prefix string) ([]Stub, error) {
+// If nothing exists under the prefix, and empty slice is returned.  Thus
+// any "not found" must be implemented by the caller.
+//
+// Items are returned in string-sorted order by path.
+//
+// TODO: new type for []Stub, an interface, something that can deal with
+// iterators and so on.
+func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
 	sp.mutex.RLock()
-	stubs := []Stub{}
-	for path, item := range sp.items {
+	paths := []string{}
+	for _, path := range sp.sortedpaths {
 		if strings.HasPrefix(path, prefix) {
-			if s, ok := item.(Stubber); ok {
-				stubs = append(stubs, s.Stub())
-			}
+			paths = append(paths, path)
+		}
+	}
+	stubs := []Stub{}
+	for _, path := range paths {
+		if s, _ := sp.GetStub(path); s != nil {
+			stubs = append(stubs, s)
 		}
 	}
 	sp.mutex.RUnlock()
 
-	return stubs, nil
+	return stubs
+
+}
+
+// GetAll returns a slice of Pathers representing all items "under" the given
+// prefix, i.e. everything with a path having the given prefix.  It is
+// usually wise to terminate the prefix with a slash, but this is up to the
+// template author.
+//
+// Items that implement the Stubber interface are returned as stubs; all
+// others are returned as-is.
+//
+// If nothing exists under the prefix, and empty slice is returned.  Thus
+// any "not found" must be implemented by the caller.
+//
+// This means the caller must care what kind of data is being returned, as
+// the only generally valid assuption is that every item is a Pather.
+//
+// TODO: iterator!
+func (sp *StandardProvider) GetAll(prefix string) []Pather {
+
+	sp.mutex.RLock()
+	pathers := []Pather{}
+	for _, path := range sp.sortedpaths {
+		if s, _ := sp.GetStub(path); s != nil {
+			pathers = append(pathers, s)
+			continue
+		}
+		if p, _ := sp.Get(path); p != nil {
+			pathers = append(pathers, p)
+		}
+	}
+	sp.mutex.RUnlock()
+
+	return pathers
 
 }
 

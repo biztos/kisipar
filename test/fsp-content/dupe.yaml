@@ -1,0 +1,9 @@
+# I am YAML! YAMLIAM!
+title: Kisipar from YAML
+html: |
+    <h2>Hello world!</h2>
+    <p>
+        Try <a href="/foo/bar">here</a>
+        or <a href="/baz/bat">here</a>,
+        or try a <a href="/nope">404</a>.
+    </p>

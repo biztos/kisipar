@@ -50,6 +50,7 @@ func MappedString(m map[string]interface{}, k string) string {
 	return ""
 }
 
+// val --> string
 func stringVal(val interface{}) string {
 	if val == nil {
 		return ""
@@ -60,6 +61,7 @@ func stringVal(val interface{}) string {
 	return fmt.Sprintf("%v", val)
 }
 
+// val --> []string
 func stringVals(val interface{}) []string {
 	if val == nil {
 		return []string{}

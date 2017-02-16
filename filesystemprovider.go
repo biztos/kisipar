@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -152,11 +153,7 @@ func (fsp *FileSystemProvider) LoadContent() error {
 		return fmt.Errorf("Not a directory: %s", config.ContentDir)
 	}
 
-	// We can't use the standard Add function because we need to lock
-	// everything long enough to replace all the items (i.e. remove things).
-	// Instead we have to build our items in place, then swap them.  Easy.
 	mdparser := frostedmd.New()
-	items := map[string]Pather{}
 	walker := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -180,6 +177,7 @@ func (fsp *FileSystemProvider) LoadContent() error {
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext == ".md" {
 			// Markdown page.
+			rpath = strings.TrimSuffix(rpath, ext)
 			b, err := ioutil.ReadFile(path)
 			if err != nil {
 				return err
@@ -189,7 +187,6 @@ func (fsp *FileSystemProvider) LoadContent() error {
 			if err != nil && config.Strict {
 				return err
 			}
-
 			// Get some things from the meta.
 			title := FlexMappedString(res.Meta, "title")
 			p, _ := StandardPageFromData(map[string]interface{}{
@@ -200,13 +197,15 @@ func (fsp *FileSystemProvider) LoadContent() error {
 				//  "updated": time.Now(),
 				"meta": res.Meta,
 			})
-			items[rpath] = p
+			fsp.Add(p)
 
 		} else if ext == ".yml" || ext == ".yaml" {
 			// YAML page.
+			rpath = strings.TrimSuffix(rpath, ext)
+			fsp.Add(NewStandardFile(rpath, path))
 		} else {
 			// File to be served as-is.
-			items[rpath] = NewStandardFile(rpath, path)
+			fsp.Add(NewStandardFile(rpath, path))
 
 		}
 
@@ -259,4 +258,41 @@ func (fsp *FileSystemProvider) String() string {
 
 	return fmt.Sprintf("<FileSystemProvider with %d items at %s, updated %s>",
 		len(fsp.items), fsp.config.ContentDir, fsp.updated)
+}
+
+// TreeString returns a string representing a tree of all items in the
+// FileSystemProvider, with Pages terminated by a an asterisk:
+//
+//  /foo*
+//  /bar/baz.js
+//  /bar/baz/bat*
+//
+// The paths are assumed to be slash-separated.
+//
+// TODO: TreeHTML, in which we create nested <ul> items with links.
+// TODO: PageTree *maybe* -- tree as a useful struct for templates.
+func (fsp *FileSystemProvider) TreeString() string {
+
+	items := fsp.GetAll("/")
+	tree := ""
+	indent := 0
+	parent := ""
+	seen := map[string]bool{}
+	for _, item := range items {
+		rpath := item.Path()
+		dir := path.Dir(rpath)
+		if !seen[dir] {
+			seen[dir] = true
+			parent = dir
+			tree += dir + "\n"
+		}
+		indent = len(dir)
+
+		rpath = strings.TrimPrefix(strings.TrimPrefix(rpath, parent), "/")
+
+		tree += strings.Repeat(" ", indent) + rpath + "\n"
+
+	}
+	return tree
+
 }
