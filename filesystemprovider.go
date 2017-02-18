@@ -273,26 +273,65 @@ func (fsp *FileSystemProvider) String() string {
 // TODO: PageTree *maybe* -- tree as a useful struct for templates.
 func (fsp *FileSystemProvider) TreeString() string {
 
-	items := fsp.GetAll("/")
-	tree := ""
-	indent := 0
+	tree := fsp.config.ContentDir + "/\n"
 	parent := ""
 	seen := map[string]bool{}
-	for _, item := range items {
+	depth := 0
+	all := fsp.GetAll("/")
+	for idx, item := range all {
+
 		rpath := item.Path()
-		dir := path.Dir(rpath)
+
+		dir := strings.TrimPrefix(path.Dir(rpath), "/")
+		fmt.Println(dir)
+		depth = strings.Count(dir, "/")
 		if !seen[dir] {
+			fmt.Println("*", dir)
 			seen[dir] = true
+			if dir == "" {
+				continue
+			}
+
+			for i := 0; i < depth; i++ {
+				tree += "│   "
+			}
+
+			// Last is special.
+			if idx == len(all)-1 {
+				tree += "└"
+			} else {
+				tree += "├"
+			}
+			tree += "── " + path.Base(dir) + "/\n"
+
 			parent = dir
-			tree += dir + "\n"
+
 		}
-		indent = len(dir)
+		continue
 
-		rpath = strings.TrimPrefix(strings.TrimPrefix(rpath, parent), "/")
+		// No dirs are items in the FSP.
+		tree += strings.Repeat(" ", len(parent))
 
-		tree += strings.Repeat(" ", indent) + rpath + "\n"
+		// Last is special.
+		if idx == len(all)-1 {
+			tree += "└"
+		} else {
+			tree += "├"
+		}
+
+		//		tree += "├"
+		tree += "── " + path.Base(rpath) + "\n"
+
+		// CHECK FORWARD DIR TO FIGURE OUT IF WE ARE AT END
+		// if indent == 0 {
+		//     tree += "└"
+		// } else {
+		//     tree += "├"
+		// }
 
 	}
+
+	fmt.Println(tree)
 	return tree
 
 }

@@ -306,6 +306,8 @@ func NewStandardFile(rpath, fpath string) *StandardFile {
 // The one exposed property, Meta, allows for other types based on this type
 // to store arbitrary data (typically a configuration).  It is not used by
 // any StandardProvider methods.
+//
+// The items are always returned in lexical (alpha) order by Path.
 type StandardProvider struct {
 	Meta        map[string]interface{}
 	items       map[string]Pather
@@ -455,14 +457,22 @@ func (sp *StandardProvider) Add(p Pather) {
 	sp.modtimes[rpath] = modtime
 	sp.updated = time.Now()
 
-	// It seems like there should be an "add to sorted slice" function, no?
+	// Remember: only those things added via Add will keep the order sorted.
 	pos := sort.SearchStrings(sp.sortedpaths, rpath)
 	if pos == len(sp.sortedpaths) || sp.sortedpaths[pos] != rpath {
-		// OK, easy enough to implement one.  But really?  And write tests?
-		// TODO: either track that thing down in the docs, or write and test
-		// one under utils.go.
-		sp.sortedpaths = append(sp.sortedpaths, rpath)
-		sort.Strings(sp.sortedpaths)
+		// In the best case we are just manipulating slices here; in the
+		// worst we are extending the array.  We trust append to handle this
+		// efficiently.
+
+		// First we make sure there's space for the new one:
+		sp.sortedpaths = append(sp.sortedpaths, "")
+
+		// Then we copy (dst,src) the elements above the insert
+		// point one position higher.
+		copy(sp.sortedpaths[pos+1:], sp.sortedpaths[pos:])
+
+		// Finally we put our new element in at the position.
+		sp.sortedpaths[pos] = rpath
 	}
 
 	sp.mutex.Unlock()
@@ -570,14 +580,14 @@ func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 func (sp *StandardProvider) GetAll(prefix string) []Pather {
 
 	sp.mutex.RLock()
-	pathers := []Pather{}
-	for _, path := range sp.sortedpaths {
+	pathers := make([]Pather, len(sp.sortedpaths))
+	for idx, path := range sp.sortedpaths {
 		if s, _ := sp.GetStub(path); s != nil {
-			pathers = append(pathers, s)
+			pathers[idx] = s
 			continue
 		}
 		if p, _ := sp.Get(path); p != nil {
-			pathers = append(pathers, p)
+			pathers[idx] = p
 		}
 	}
 	sp.mutex.RUnlock()
