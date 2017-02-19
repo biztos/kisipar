@@ -282,11 +282,11 @@ func (fsp *FileSystemProvider) TreeString() string {
 
 		rpath := item.Path()
 
+		fmt.Println(rpath)
+
 		dir := strings.TrimPrefix(path.Dir(rpath), "/")
-		fmt.Println(dir)
 		depth = strings.Count(dir, "/")
 		if !seen[dir] {
-			fmt.Println("*", dir)
 			seen[dir] = true
 			if dir == "" {
 				continue
@@ -307,11 +307,16 @@ func (fsp *FileSystemProvider) TreeString() string {
 			parent = dir
 
 		}
-		continue
 
 		// No dirs are items in the FSP.
-		tree += strings.Repeat(" ", len(parent))
+		for i := 0; i < depth; i++ {
+			tree += "│   "
+		}
 
+		// tree += strings.Repeat("    ", depth)
+		if parent == "x" {
+			panic(1)
+		}
 		// Last is special.
 		if idx == len(all)-1 {
 			tree += "└"

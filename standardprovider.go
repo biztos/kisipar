@@ -15,7 +15,6 @@ import (
 	"html/template"
 	"io"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -309,14 +308,14 @@ func NewStandardFile(rpath, fpath string) *StandardFile {
 //
 // The items are always returned in lexical (alpha) order by Path.
 type StandardProvider struct {
-	Meta        map[string]interface{}
-	items       map[string]Pather
-	sortedpaths []string
-	modtimes    map[string]time.Time
-	template    *template.Template
-	created     time.Time
-	updated     time.Time
-	mutex       sync.RWMutex
+	Meta     map[string]interface{}
+	items    map[string]Pather
+	paths    PathStrings
+	modtimes map[string]time.Time
+	template *template.Template
+	created  time.Time
+	updated  time.Time
+	mutex    sync.RWMutex
 }
 
 // NewStandardProvider returns an empty StandardProvider to be populated
@@ -324,12 +323,12 @@ type StandardProvider struct {
 // in its methods; use this function instead.
 func NewStandardProvider() *StandardProvider {
 	return &StandardProvider{
-		items:       map[string]Pather{},
-		sortedpaths: []string{},
-		modtimes:    map[string]time.Time{},
-		created:     time.Now(),
-		updated:     time.Now(),
-		mutex:       sync.RWMutex{},
+		items:    map[string]Pather{},
+		paths:    PathStrings{},
+		modtimes: map[string]time.Time{},
+		created:  time.Now(),
+		updated:  time.Now(),
+		mutex:    sync.RWMutex{},
 	}
 }
 
@@ -456,25 +455,7 @@ func (sp *StandardProvider) Add(p Pather) {
 	sp.items[rpath] = p
 	sp.modtimes[rpath] = modtime
 	sp.updated = time.Now()
-
-	// Remember: only those things added via Add will keep the order sorted.
-	pos := sort.SearchStrings(sp.sortedpaths, rpath)
-	if pos == len(sp.sortedpaths) || sp.sortedpaths[pos] != rpath {
-		// In the best case we are just manipulating slices here; in the
-		// worst we are extending the array.  We trust append to handle this
-		// efficiently.
-
-		// First we make sure there's space for the new one:
-		sp.sortedpaths = append(sp.sortedpaths, "")
-
-		// Then we copy (dst,src) the elements above the insert
-		// point one position higher.
-		copy(sp.sortedpaths[pos+1:], sp.sortedpaths[pos:])
-
-		// Finally we put our new element in at the position.
-		sp.sortedpaths[pos] = rpath
-	}
-
+	sp.paths = sp.paths.Add(rpath)
 	sp.mutex.Unlock()
 }
 
@@ -545,7 +526,7 @@ func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
 	sp.mutex.RLock()
 	paths := []string{}
-	for _, path := range sp.sortedpaths {
+	for _, path := range sp.paths {
 		if strings.HasPrefix(path, prefix) {
 			paths = append(paths, path)
 		}
@@ -580,8 +561,8 @@ func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 func (sp *StandardProvider) GetAll(prefix string) []Pather {
 
 	sp.mutex.RLock()
-	pathers := make([]Pather, len(sp.sortedpaths))
-	for idx, path := range sp.sortedpaths {
+	pathers := make([]Pather, len(sp.paths))
+	for idx, path := range sp.paths {
 		if s, _ := sp.GetStub(path); s != nil {
 			pathers[idx] = s
 			continue
