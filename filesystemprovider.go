@@ -230,11 +230,11 @@ func NewFileSystemProvider(config FileSystemProviderConfig) *FileSystemProvider 
 
 // LoadFileSystemProvider returns a FileSystemProvider intialized from the
 // given config with templates and items loaded, via LoadTemplates and
-// LoadItems; or the first error that occurs.
+// LoadContent; or the first error that occurs.
 //
 // Templates are read from the configured TemplateDir, and all available items
 // are read from the ContentDir.  TemplateDir is optional, allowing for the
-// use of built-in default templates.
+// use of built-in templates.
 //
 // If the configured AutoRefresh is true, then both TemplateDir and ContentDir
 // are watched for changes and the content updated when needed.
@@ -247,7 +247,12 @@ func LoadFileSystemProvider(config FileSystemProviderConfig) (*FileSystemProvide
 		return nil, err
 	}
 
-	// TODO: load shit up, set up autorefresh, etc.
+	// Then content.
+	if err := fsp.LoadContent(); err != nil {
+		return nil, err
+	}
+
+	// TODO: set up autorefresh, etc.
 	return fsp, nil
 
 }
