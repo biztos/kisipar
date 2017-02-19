@@ -50,6 +50,21 @@ func Test_TemplatesFromData(t *testing.T) {
 
 }
 
+func Test_TemplatesFromData_BadTemplate(t *testing.T) {
+
+	assert := assert.New(t)
+
+	input := map[string]string{"foo": "broken: {{ nosuchfunctiondefined }}"}
+
+	_, err := kisipar.TemplatesFromData(input)
+	if assert.Error(err, "got error") {
+		exp := "Template foo failed: template: foo:1: function " +
+			"\"nosuchfunctiondefined\" not defined"
+		assert.Equal(exp, err.Error(), "error as expected")
+	}
+
+}
+
 func Test_PageTemplate_NilTemplate(t *testing.T) {
 
 	assert := assert.New(t)

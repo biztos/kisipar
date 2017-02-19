@@ -4,6 +4,7 @@ package kisipar_test
 
 import (
 	// Standard:
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -410,4 +411,40 @@ func Test_StandardProvider_GetStubs(t *testing.T) {
 	got := sp.GetStubs("foo")
 	assert.Equal(3, len(got), "got expected number of items")
 
+}
+
+// Mostly tested under templates_test.go, cf. TemplatesFromData.
+func Test_StandardProvider_TemplateFor(t *testing.T) {
+
+	assert := assert.New(t)
+
+	yaml := `# I am YAML!
+pages:
+    /foo/bar:
+        title: Anything
+templates:
+    foo/bar.html: |
+        HERE
+`
+
+	sp, err := kisipar.StandardProviderFromYaml(yaml)
+	if err != nil {
+		panic(err)
+	}
+	p, err := sp.Get("/foo/bar")
+	if err != nil {
+		panic(err)
+	}
+	page, ok := p.(*kisipar.StandardPage)
+	if !ok {
+		panic(p)
+	}
+	tmpl := sp.TemplateFor(page)
+	if assert.NotNil(tmpl, "got template") {
+		assert.Equal("foo/bar.html", tmpl.Name(), "right template returned")
+		var b bytes.Buffer
+		if assert.Nil(tmpl.Execute(&b, nil), "executes without error") {
+			assert.Equal("HERE\n", b.String(), "content as expected")
+		}
+	}
 }
