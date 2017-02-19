@@ -596,3 +596,10 @@ func (sp *StandardProvider) SetTemplate(tmpl *template.Template) {
 	sp.updated = time.Now()
 	sp.mutex.Unlock()
 }
+
+// Paths returns an ordered list of the paths of all items known to the
+// StandardProvider.  It is often the case that all paths without extensions
+// are Pages.
+func (sp *StandardProvider) Paths() []string {
+	return []string(sp.paths)
+}

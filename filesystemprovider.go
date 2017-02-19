@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -258,85 +257,4 @@ func (fsp *FileSystemProvider) String() string {
 
 	return fmt.Sprintf("<FileSystemProvider with %d items at %s, updated %s>",
 		len(fsp.items), fsp.config.ContentDir, fsp.updated)
-}
-
-// TreeString returns a string representing a tree of all items in the
-// FileSystemProvider, with Pages terminated by a an asterisk:
-//
-//  /foo*
-//  /bar/baz.js
-//  /bar/baz/bat*
-//
-// The paths are assumed to be slash-separated.
-//
-// TODO: TreeHTML, in which we create nested <ul> items with links.
-// TODO: PageTree *maybe* -- tree as a useful struct for templates.
-func (fsp *FileSystemProvider) TreeString() string {
-
-	tree := fsp.config.ContentDir + "/\n"
-	parent := ""
-	seen := map[string]bool{}
-	depth := 0
-	all := fsp.GetAll("/")
-	for idx, item := range all {
-
-		rpath := item.Path()
-
-		fmt.Println(rpath)
-
-		dir := strings.TrimPrefix(path.Dir(rpath), "/")
-		depth = strings.Count(dir, "/")
-		if !seen[dir] {
-			seen[dir] = true
-			if dir == "" {
-				continue
-			}
-
-			for i := 0; i < depth; i++ {
-				tree += "│   "
-			}
-
-			// Last is special.
-			if idx == len(all)-1 {
-				tree += "└"
-			} else {
-				tree += "├"
-			}
-			tree += "── " + path.Base(dir) + "/\n"
-
-			parent = dir
-
-		}
-
-		// No dirs are items in the FSP.
-		for i := 0; i < depth; i++ {
-			tree += "│   "
-		}
-
-		// tree += strings.Repeat("    ", depth)
-		if parent == "x" {
-			panic(1)
-		}
-		// Last is special.
-		if idx == len(all)-1 {
-			tree += "└"
-		} else {
-			tree += "├"
-		}
-
-		//		tree += "├"
-		tree += "── " + path.Base(rpath) + "\n"
-
-		// CHECK FORWARD DIR TO FIGURE OUT IF WE ARE AT END
-		// if indent == 0 {
-		//     tree += "└"
-		// } else {
-		//     tree += "├"
-		// }
-
-	}
-
-	fmt.Println(tree)
-	return tree
-
 }

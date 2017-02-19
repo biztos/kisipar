@@ -128,25 +128,17 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 	err := fsp.LoadContent()
 	assert.Nil(err, "no error")
 
-	// TODO -- crappo -- gotta sort by length of path first.
-	// Otherwise we get
-	// /a.html
-	// /b/c/d.html
-	// /c.html
-	// But there is code for that in old kisipar.
-	// The tree is the easiest way to verify a load in circumstances like
-	// this:
-	exp := `/
- dupe
- foo/
-     bar
- foo/bar/
-         baz
- foo
- index
- other
- other.txt
-`
-
-	assert.Equal(exp, fsp.TreeString(), "TreeString is correct")
+	exp := []string{
+		"/dupe",
+		"/foo",
+		"/index",
+		"/other",
+		"/other.txt",
+		"/foo/bar",
+		"/foo/s.js",
+		"/foo/bar/baz",
+		"/foo/bother/data.json",
+		"/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
 }
