@@ -1,5 +1,41 @@
 # KISIPAR NOTES
 
+    NO FUCKING ITERATORS FOR NOW
+    
+    LATEST PLAN:
+    
+    1. MVP FOR BLOGS & PLACEHOLDERS USING FILE SYSTEM
+    2. WAIT & SEE WHAT ELSE
+    3. CONSIDER EBP ON A DIFFERENT SYSTEM ALTOGETHER
+        (but could still start it here)
+    
+    NEXT UP - TIME BASED SETS
+
+    What is the MVP?
+    
+    * Frostopolis from files.
+        * With RSS
+    * Placeholders from files for all others planned.
+    * All with TSL at the edge (maybe not in kisipar yet)
+    * Single host DigitalOcean
+
+    Low-hanging fruit after that:
+    
+    * Placeholder KFCOM
+    * Placeholder old Migra from files / archive.org
+
+## GOALS
+
+### Abstract Data Source
+
+Three types implemented at start:
+
+1. Virtual (also used for testing)
+2. FileSystem
+3. Whatever I use for real data.
+
+### Multiple Sites from One Executable
+
     Maybe something like GetHost or Get(r *http.Request)?
     
     Problem is that you might have a Provider that knows about
@@ -17,20 +53,6 @@
     p, err := mp.HostProvider("example.com")
     
     Probably best that way right?
-
-
-## GOALS
-
-### Abstract Data Source
-
-Three types implemented at start:
-
-1. Virtual (also used for testing)
-2. FileSystem
-3. Whatever I use for real data.
-
-### Multiple Sites from One Executable
-
 
 ### Caching of Known Paths
 
