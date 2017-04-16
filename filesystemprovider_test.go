@@ -91,7 +91,7 @@ func Test_FileSystemProvider_LoadTemplates_TemplateError(t *testing.T) {
 
 // Sort of a pain in the ass edge case but I hit it for real while debugging
 // so (alas) it's worth testing for.
-func Test_FileSystemProvider_LoadTemplates_InnerSymlinkErr(t *testing.T) {
+func Test_FileSystemProvider_LoadTemplates_InnerSymlinkError(t *testing.T) {
 
 	assert := assert.New(t)
 
@@ -108,7 +108,89 @@ func Test_FileSystemProvider_LoadTemplates_InnerSymlinkErr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Nil(err)
+	// Link to it.
+	ln := filepath.Join(dir, "linked.html")
+	if err = os.Symlink(fn, ln); err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove the original but leave the link...
+	os.Remove(fn)
+
+	// And we should get an error loading the templates:
+	config := kisipar.FileSystemProviderConfig{TemplateDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadTemplates()
+	if assert.Error(err, "got error") {
+		assert.Regexp("^Error walking .*linked.html", err.Error())
+	}
+
+}
+
+func Test_FileSystemProvider_LoadTemplates_InnerSymlinkIsDir(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Top dir to hold the goods.
+	dir, err := ioutil.TempDir("", "kisipar-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Inner *dir* which is the link target.
+	tdir, err := ioutil.TempDir(dir, "target.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Link to it (the link will be a file).
+	ln := filepath.Join(dir, "linked.html")
+	if err = os.Symlink(tdir, ln); err != nil {
+		t.Fatal(err)
+	}
+
+	// And we should get no error, but exercise the symlink dir skip logic:
+	config := kisipar.FileSystemProviderConfig{TemplateDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadTemplates()
+	if !assert.Nil(err, "no error") {
+		t.Log(err)
+	}
+
+}
+
+func Test_FileSystemProvider_LoadTemplates_FileReadError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Top dir to hold the goods.
+	dir, err := ioutil.TempDir("", "kisipar-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Inner file which we will fail to read.
+	fn := filepath.Join(dir, "tilos.html")
+	if err = ioutil.WriteFile(fn, []byte("hello"), os.FileMode(0000)); err != nil {
+		t.Fatal(err)
+	}
+
+	// And we should get a file read error walking the dir:
+	config := kisipar.FileSystemProviderConfig{TemplateDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadTemplates()
+	if assert.Error(err, "got error") {
+		assert.Regexp("^Error walking .*tilos.html", err.Error())
+	}
+
 }
 
 func Test_FileSystemProvider_LoadTemplates_Success(t *testing.T) {
@@ -168,6 +250,129 @@ func Test_FileSystemProvider_LoadContent_DirNotDir(t *testing.T) {
 	}
 }
 
+// Same story as for templates:
+func Test_FileSystemProvider_LoadContent_InnerSymlinkError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Top dir to hold the goods.
+	dir, err := ioutil.TempDir("", "kisipar-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Inner file which is the link target.
+	fn := filepath.Join(dir, "target.html")
+	if err = ioutil.WriteFile(fn, []byte("hello"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	// Link to it.
+	ln := filepath.Join(dir, "linked.html")
+	if err = os.Symlink(fn, ln); err != nil {
+		t.Fatal(err)
+	}
+
+	// Remove the original but leave the link...
+	os.Remove(fn)
+
+	// And we should get an error loading the content:
+	config := kisipar.FileSystemProviderConfig{ContentDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadContent()
+	if assert.Error(err, "got error") {
+		assert.Regexp("^Error walking .*linked.html", err.Error())
+	}
+
+}
+
+func Test_FileSystemProvider_LoadContent_InnerSymlinkIsDir(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Top dir to hold the goods.
+	dir, err := ioutil.TempDir("", "kisipar-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Inner *dir* which is the link target.
+	tdir, err := ioutil.TempDir(dir, "target.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Link to it (the link will be a file).
+	ln := filepath.Join(dir, "linked.html")
+	if err = os.Symlink(tdir, ln); err != nil {
+		t.Fatal(err)
+	}
+
+	// And we should get no error, but exercise the symlink dir skip logic:
+	config := kisipar.FileSystemProviderConfig{ContentDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadContent()
+	if !assert.Nil(err, "no error") {
+		t.Log(err)
+	}
+
+}
+
+func Test_FileSystemProvider_LoadContent_FileReadError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Top dir to hold the goods.
+	dir, err := ioutil.TempDir("", "kisipar-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	// Inner file which we will fail to read.
+	fn := filepath.Join(dir, "tilos.md")
+	if err = ioutil.WriteFile(fn, []byte("hello"), os.FileMode(0000)); err != nil {
+		t.Fatal(err)
+	}
+
+	// And we should get a file read error walking the dir:
+	config := kisipar.FileSystemProviderConfig{ContentDir: dir}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err = fsp.LoadContent()
+	if assert.Error(err, "got error") {
+		assert.Regexp("^Error walking .*tilos.md", err.Error())
+	}
+
+}
+
+// Normally we continue parsing after Frosted Markdown parsing errors, but
+// we can set Strict mode to force a failure.
+func Test_FileSystemProvider_LoadContent_MarkdownErrorStrict(t *testing.T) {
+
+	assert := assert.New(t)
+
+	dir := filepath.Join("testdata", "fsp-bad-content")
+
+	// When Strict is set, we get an error:
+	config := kisipar.FileSystemProviderConfig{ContentDir: dir, Strict: true}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	if assert.Error(err, "got error") {
+		assert.Regexp("^Error walking .*bad-yaml.md.*yaml", err.Error())
+	}
+
+}
+
 func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 
 	assert := assert.New(t)
@@ -192,6 +397,86 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 		"/foo/bar/baz",
 		"/foo/bother/data.json",
 		"/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
+}
+
+func Test_LoadFileSystemProvider_TemplateError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:  filepath.Join("testdata", "fsp-content"),
+		TemplateDir: filepath.Join("testdata", "fsp-bad-templates"),
+	}
+
+	_, err := kisipar.LoadFileSystemProvider(config)
+
+	if assert.Error(err) {
+		assert.Regexp("^Error walking .*broken.html", err.Error())
+	}
+}
+
+func Test_LoadFileSystemProvider_ContentError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:  filepath.Join("testdata", "fsp-bad-content"),
+		TemplateDir: filepath.Join("testdata", "fsp-templates"),
+		Strict:      true,
+	}
+
+	_, err := kisipar.LoadFileSystemProvider(config)
+
+	if assert.Error(err) {
+		assert.Regexp("^Error walking .*bad-yaml.md.*yaml", err.Error())
+	}
+}
+
+func Test_LoadFileSystemProvider_Success(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:  filepath.Join("testdata", "fsp-content"),
+		TemplateDir: filepath.Join("testdata", "fsp-templates"),
+	}
+
+	fsp, err := kisipar.LoadFileSystemProvider(config)
+
+	assert.Nil(err, "no error")
+
+	exp := []string{
+		"/dupe",
+		"/foo",
+		"/index",
+		"/other",
+		"/other.txt",
+		"/foo/bar",
+		"/foo/s.js",
+		"/foo/bar/baz",
+		"/foo/bother/data.json",
+		"/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
+}
+
+func Test_LoadFileSystemProvider_SuccessWithContentError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:  filepath.Join("testdata", "fsp-bad-content"),
+		TemplateDir: filepath.Join("testdata", "fsp-templates"),
+	}
+
+	fsp, err := kisipar.LoadFileSystemProvider(config)
+
+	assert.Nil(err, "no error")
+
+	exp := []string{
+		"/bad-yaml",
 	}
 	assert.Equal(exp, fsp.Paths(), "paths as expected")
 }

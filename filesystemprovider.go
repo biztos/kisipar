@@ -179,7 +179,7 @@ func (fsp *FileSystemProvider) LoadContent() error {
 
 			res, err := mdparser.Parse(b)
 			if err != nil && config.Strict {
-				return err
+				return fmt.Errorf("%s: %s", path, err)
 			}
 			// Get some things from the meta.
 			title := FlexMappedString(res.Meta, "title")
