@@ -52,9 +52,6 @@ func (s *StandardPageStub) TypeString() string { return "StandardPageStub" }
 // IsPageStub returns true for the StandardPageStub.
 func (s *StandardPageStub) IsPageStub() bool { return true }
 
-// IsPage always returns true for a StandardPageStub.
-func (sps *StandardPageStub) IsPage() bool { return true }
-
 // StandardContent is an immutable piece of arbitrary content stored as a
 // string internally, with no metadata other than the ContentType.  It
 // implements the Content interface.
@@ -114,7 +111,7 @@ type StandardPage struct {
 }
 
 // Stub returns a StandardPageStub from the StandardPage.
-func (p *StandardPage) Stub() *StandardPageStub {
+func (p *StandardPage) Stub() Stub {
 	return &StandardPageStub{*p}
 }
 
@@ -509,35 +506,41 @@ func (sp *StandardProvider) GetStub(rpath string) (Stub, error) {
 
 }
 
+// PathsUnder returns a slice of all item paths "under" the given prefix.
+func (sp *StandardProvider) PathsUnder(prefix string) []string {
+
+	sp.mutex.RLock()
+
+	paths := []string{}
+
+	for _, path := range sp.paths {
+		if strings.HasPrefix(path, prefix) {
+			paths = append(paths, path)
+		}
+	}
+	sp.mutex.RUnlock()
+
+	return paths
+
+}
+
 // GetPageStubs returns a slice of all PageStubs "under" the given prefix,
 // following the logic described in GetStubs.
 //
 // This is the standard way of retrieving a list of Pages below the current
 // directory.
 func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
+	paths := sp.PathsUnder(prefix)
 	sp.mutex.RLock()
-	paths := []string{}
-	for _, path := range sp.paths {
-		if strings.HasPrefix(path, prefix) {
-			paths = append(paths, path)
-		}
-	}
 	pagestubs := []PageStub{}
 	for _, path := range paths {
-		fmt.Println("*", path)
 		if s, _ := sp.GetStub(path); s != nil {
 			// Only "real" page-backed PageStubs.
-			fmt.Println("+", path)
 			if s.IsPageStub() {
-				fmt.Println("**")
-				// if ps, ok := s.(PageStub); ok {
-				//     pagestubs = append(pagestubs, ps)
-				// }
-			} else {
-				fmt.Println("NOT PAGE STUB")
+				if ps, ok := s.(PageStub); ok {
+					pagestubs = append(pagestubs, ps)
+				}
 			}
-		} else {
-			fmt.Println("-- no stub")
 		}
 	}
 	sp.mutex.RUnlock()
@@ -546,7 +549,7 @@ func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
 }
 
 // GetStubs returns a slice of Stub items for everything "under" the given
-// prefix, i.e. everything with a path having the given prefix. It is
+// prefix, i.e. everything with a path beginning with that prefix. It is
 // usually wise to terminate the prefix with a slash, but this is up to the
 // template author.  If the prefix is the empty string then all available
 // Stubs will be returned.
@@ -561,16 +564,12 @@ func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
 // iterators and so on.
 // TODO: build out the use-case for this, basically it's for stuff like
 // lists of images where the template knows the type but the system doesn't.
+// TODO: make the stub array first, return the used portion as a slice.
 func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
-	sp.mutex.RLock()
-	paths := []string{}
-	for _, path := range sp.paths {
-		if strings.HasPrefix(path, prefix) {
-			paths = append(paths, path)
-		}
-	}
+	paths := sp.PathsUnder(prefix)
 	stubs := []Stub{}
+	sp.mutex.RLock()
 	for _, path := range paths {
 		if s, _ := sp.GetStub(path); s != nil {
 			stubs = append(stubs, s)
@@ -600,19 +599,18 @@ func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 // TODO: iterator!
 func (sp *StandardProvider) GetAll(prefix string) []Pather {
 
+	paths := sp.PathsUnder(prefix)
+	pathers := make([]Pather, len(paths))
 	sp.mutex.RLock()
-	pathers := make([]Pather, len(sp.paths))
-	for idx, path := range sp.paths {
+	for idx, path := range paths {
 		if s, _ := sp.GetStub(path); s != nil {
 			pathers[idx] = s
-			continue
-		}
-		if p, _ := sp.Get(path); p != nil {
+		} else {
+			p, _ := sp.Get(path)
 			pathers[idx] = p
 		}
 	}
 	sp.mutex.RUnlock()
-
 	return pathers
 
 }

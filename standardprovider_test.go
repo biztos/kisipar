@@ -35,10 +35,16 @@ func (p TestPatherStubber) Stub() kisipar.Stub { return p }
 func Test_InterfaceConformity(t *testing.T) {
 
 	// This will crash if anything doesn't match.
-	var f = func(ds kisipar.Provider) {
+	var f1 = func(ds kisipar.Provider) {
 		t.Log(ds)
 	}
-	f(&kisipar.StandardProvider{})
+	f1(&kisipar.StandardProvider{})
+
+	// ...and so on...
+	var f2 = func(x kisipar.PageStub) {
+		t.Log(x)
+	}
+	f2(&kisipar.StandardPageStub{})
 
 }
 
@@ -336,18 +342,22 @@ func Test_StandardPage_Stub(t *testing.T) {
 		"<h1>foo</h1>",                          // html
 	)
 
-	p := src.Stub()
+	// This is a bit wonky but you'd normally not have to deal with it
+	// directly: Go thinks this is a plain Stub but it's actually a PageStub;
+	// we have to cast it as such before we can access its other methods.
+	s := src.Stub()
+	p, _ := s.(kisipar.PageStub)
 
 	// The stub is identical to the page but also has stubby stuff.
-	assert.True(p.IsPageStub(), "it's a page stub")
-	assert.True(p.IsPage(), "it's also a page")
+	if !assert.True(s.IsPageStub(), "it's a page stub") {
+		t.Fatal(fmt.Sprintf("%T", s))
+	}
 
 	assert.Equal("The Foo", p.Title(), "Title")
 	assert.Equal([]string{"boo", "hoo"}, p.Tags(), "Tags")
 	assert.Equal(time.Unix(0, 0), p.Created(), "Created")
 	assert.Equal(time.Unix(10000, 0), p.Updated(), "Updated")
 	assert.Equal(map[string]interface{}{"helo": "WORLD"}, p.Meta(), "Meta")
-	assert.Equal(template.HTML("<h1>foo</h1>"), p.HTML(), "HTML")
 
 }
 
@@ -643,6 +653,27 @@ func Test_StandardProvider_GetStubs(t *testing.T) {
 	got := sp.GetStubs("/foo")
 	assert.Equal(2, len(got), "got expected number of items")
 	exp := []string{"/foo", "/foodie"}
+	paths := []string{}
+	for _, v := range got {
+		paths = append(paths, v.Path())
+	}
+	assert.Equal(exp, paths, "got stubs at expected paths")
+
+}
+
+func Test_StandardProvider_GetAll(t *testing.T) {
+
+	assert := assert.New(t)
+
+	sp := kisipar.NewStandardProvider()
+	sp.Add(TestPatherStubber("/foo"))
+	sp.Add(TestPatherStubber("/foodie"))
+	sp.Add(TestPather("/foo/bar/baz")) // not stubber...
+	sp.Add(TestPatherStubber("/foment"))
+
+	got := sp.GetAll("/foo")
+	assert.Equal(3, len(got), "got expected number of items")
+	exp := []string{"/foo", "/foodie", "/foo/bar/baz"}
 	paths := []string{}
 	for _, v := range got {
 		paths = append(paths, v.Path())
