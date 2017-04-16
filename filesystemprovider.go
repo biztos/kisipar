@@ -25,7 +25,7 @@ type FileSystemProviderConfig struct {
 	TemplateDir     string   // Templates, if any.
 	ExcludePrefixes []string // Ignore anything with these prefixes.
 	ExcludeSuffixes []string // Ignore anything with these suffixes.
-	Strict          bool     // Fail on Page metadata parsing errors.
+	AllowMetaErrors bool     // Don't fail on Page metadata parsing errors.
 	AutoRefresh     bool     // Watch filesystem and refresh
 }
 
@@ -119,7 +119,8 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 //
 // Markdown and YAML files are added as StandardPages, while all other
 // files are added as StandardFiles.  The file extensions recognized are
-// .yaml, .yml, and .md.
+// .yaml, .yml, and .md.  (Note that HTML can be used as-is in Markdown files,
+// allowing verbatim content to be included in a StandardPage.)
 //
 // Page files have their extensions stripped from their request paths, so
 // "/foo/bar/baz.md" has a Path of "/foo/bar/baz".
@@ -128,9 +129,6 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 // the top of the file:
 //
 // https://github.com/biztos/frostedmd
-//
-// Anything not loaded here is removed, in a blocking operation, after the
-// fact.
 //
 // TODO: mutex locking strategy here!  Just duplicate Add or what?
 // (don't want to deadlock)
@@ -178,10 +176,11 @@ func (fsp *FileSystemProvider) LoadContent() error {
 			}
 
 			res, err := mdparser.Parse(b)
-			if err != nil && config.Strict {
+			if err != nil && !config.AllowMetaErrors {
 				return fmt.Errorf("%s: %s", path, err)
 			}
 			// Get some things from the meta.
+			// TODO: additional meta stuff for tags etc?
 			title := FlexMappedString(res.Meta, "title")
 			p, _ := StandardPageFromData(map[string]interface{}{
 				"path":  rpath,

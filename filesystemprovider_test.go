@@ -353,16 +353,14 @@ func Test_FileSystemProvider_LoadContent_FileReadError(t *testing.T) {
 
 }
 
-// Normally we continue parsing after Frosted Markdown parsing errors, but
-// we can set Strict mode to force a failure.
-func Test_FileSystemProvider_LoadContent_MarkdownErrorStrict(t *testing.T) {
+func Test_FileSystemProvider_LoadContent_PageMetaError(t *testing.T) {
 
 	assert := assert.New(t)
 
 	dir := filepath.Join("testdata", "fsp-bad-content")
 
 	// When Strict is set, we get an error:
-	config := kisipar.FileSystemProviderConfig{ContentDir: dir, Strict: true}
+	config := kisipar.FileSystemProviderConfig{ContentDir: dir}
 
 	fsp := kisipar.NewFileSystemProvider(config)
 
@@ -371,6 +369,28 @@ func Test_FileSystemProvider_LoadContent_MarkdownErrorStrict(t *testing.T) {
 		assert.Regexp("^Error walking .*bad-yaml.md.*yaml", err.Error())
 	}
 
+}
+
+func Test_LoadFileSystemProvider_PageMetaError_AllowMetaErrors(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:      filepath.Join("testdata", "fsp-bad-content"),
+		AllowMetaErrors: true,
+	}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	if !assert.Nil(err, "no error") {
+		t.Log(err)
+	}
+
+	exp := []string{
+		"/bad-yaml",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
 }
 
 func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
@@ -424,7 +444,6 @@ func Test_LoadFileSystemProvider_ContentError(t *testing.T) {
 	config := kisipar.FileSystemProviderConfig{
 		ContentDir:  filepath.Join("testdata", "fsp-bad-content"),
 		TemplateDir: filepath.Join("testdata", "fsp-templates"),
-		Strict:      true,
 	}
 
 	_, err := kisipar.LoadFileSystemProvider(config)
@@ -458,25 +477,6 @@ func Test_LoadFileSystemProvider_Success(t *testing.T) {
 		"/foo/bar/baz",
 		"/foo/bother/data.json",
 		"/foo/bother/boo/bam",
-	}
-	assert.Equal(exp, fsp.Paths(), "paths as expected")
-}
-
-func Test_LoadFileSystemProvider_SuccessWithContentError(t *testing.T) {
-
-	assert := assert.New(t)
-
-	config := kisipar.FileSystemProviderConfig{
-		ContentDir:  filepath.Join("testdata", "fsp-bad-content"),
-		TemplateDir: filepath.Join("testdata", "fsp-templates"),
-	}
-
-	fsp, err := kisipar.LoadFileSystemProvider(config)
-
-	assert.Nil(err, "no error")
-
-	exp := []string{
-		"/bad-yaml",
 	}
 	assert.Equal(exp, fsp.Paths(), "paths as expected")
 }
