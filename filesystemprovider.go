@@ -34,8 +34,7 @@ type FileSystemProviderConfig struct {
 // refreshed when the source directory changes.
 //
 // It is the recommended Provider to use for developing templates, and is
-// also useful for set-and-forget sites such as placeholders or smaller
-// archives.
+// also useful for simpler, mostly static web sites.
 type FileSystemProvider struct {
 	*StandardProvider
 
@@ -66,9 +65,7 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 
 	tmpl, _ := template.New("").Funcs(FuncMap()).Parse("")
 	walker := func(path string, info os.FileInfo, err error) error {
-		if info == nil {
-			return nil
-		}
+
 		if info.IsDir() {
 			return nil
 		}
@@ -154,9 +151,7 @@ func (fsp *FileSystemProvider) LoadContent() error {
 
 	mdparser := frostedmd.New()
 	walker := func(path string, info os.FileInfo, err error) error {
-		if info == nil {
-			return nil
-		}
+
 		if info.IsDir() {
 			return nil
 		}
