@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	// Helpful:
@@ -417,6 +418,97 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 		"/foo/bar/baz",
 		"/foo/bother/data.json",
 		"/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
+}
+
+func Test_FileSystemProvider_LoadContent_Success_Exclude(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir: filepath.Join("testdata", "fsp-content"),
+		Exclude:    regexp.MustCompile("^foo/b|other.md"),
+	}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	assert.Nil(err, "no error")
+
+	// Excluded items are commented out:
+	exp := []string{
+		"/dupe",
+		"/foo",
+		"/index",
+		// "/other",
+		"/other.txt",
+		// "/foo/bar",
+		"/foo/s.js",
+		// "/foo/bar/baz",
+		// "/foo/bother/data.json",
+		// "/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
+}
+
+func Test_FileSystemProvider_LoadContent_Success_Include(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir: filepath.Join("testdata", "fsp-content"),
+		Include:    regexp.MustCompile("[.](json|txt)$"),
+	}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	assert.Nil(err, "no error")
+
+	// Excluded items are commented out:
+	exp := []string{
+		// "/dupe",
+		// "/foo",
+		// "/index",
+		// "/other",
+		"/other.txt",
+		// "/foo/bar",
+		// "/foo/s.js",
+		// "/foo/bar/baz",
+		"/foo/bother/data.json",
+		// "/foo/bother/boo/bam",
+	}
+	assert.Equal(exp, fsp.Paths(), "paths as expected")
+}
+
+func Test_FileSystemProvider_LoadContent_Success_ExcludeInclude(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir: filepath.Join("testdata", "fsp-content"),
+		Exclude:    regexp.MustCompile("^other"),
+		Include:    regexp.MustCompile("[.](json|txt)$"),
+	}
+
+	fsp := kisipar.NewFileSystemProvider(config)
+
+	err := fsp.LoadContent()
+	assert.Nil(err, "no error")
+
+	// Excluded items are commented out:
+	exp := []string{
+		// "/dupe",
+		// "/foo",
+		// "/index",
+		// "/other",
+		// "/other.txt",
+		// "/foo/bar",
+		// "/foo/s.js",
+		// "/foo/bar/baz",
+		"/foo/bother/data.json",
+		// "/foo/bother/boo/bam",
 	}
 	assert.Equal(exp, fsp.Paths(), "paths as expected")
 }

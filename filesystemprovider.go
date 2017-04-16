@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	// Third-party packages:
@@ -21,12 +22,12 @@ import (
 // FileSystemProviderConfig defines the configuration options for a
 // FileSystemProvider.
 type FileSystemProviderConfig struct {
-	ContentDir      string   // All content, parseable and static.
-	TemplateDir     string   // Templates, if any.
-	ExcludePrefixes []string // Ignore anything with these prefixes.
-	ExcludeSuffixes []string // Ignore anything with these suffixes.
-	AllowMetaErrors bool     // Don't fail on Page metadata parsing errors.
-	AutoRefresh     bool     // Watch filesystem and refresh
+	ContentDir      string         // All content, parseable and static.
+	TemplateDir     string         // Templates, if any.
+	Exclude         *regexp.Regexp // Exclude paths matching this regexp.
+	Include         *regexp.Regexp // Include paths matching this regexp.
+	AllowMetaErrors bool           // Don't fail on Page metadata errors.
+	AutoRefresh     bool           // Watch filesystem and refresh
 }
 
 // FileSystemProvider is a Provider loaded from the local file system. Its
@@ -112,10 +113,10 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 //
 // If the ContentDir is the empty string then no action is taken.
 //
-// By default all listed items are included except those starting with a dot;
-// this can be changed by setting ExcludePrefixes and/or ExcludeSuffixes in
-// the config.  Note that these exclusions apply to both files and
-// directories.
+// By default all listed items are included except those starting with a dot.
+// Additional exclusions can be defined by setting the Exclude and Include
+// Regexp items in the config; these are applied to the relative path of each
+// file on disk.  If a path matches both expressions it will be excluded.
 //
 // Markdown and YAML files are added as StandardPages, while all other
 // files are added as StandardFiles.  The file extensions recognized are
@@ -149,6 +150,16 @@ func (fsp *FileSystemProvider) LoadContent() error {
 
 	mdparser := frostedmd.New()
 	walker := func(path string, info os.FileInfo, err error) error {
+
+		// Check exclusions/inclusions first (we assume this is faster than
+		// doing file system checks).
+		relpath, err := filepath.Rel(config.ContentDir, path)
+		if config.Exclude != nil && config.Exclude.MatchString(relpath) {
+			return nil
+		}
+		if config.Include != nil && !config.Include.MatchString(relpath) {
+			return nil
+		}
 
 		if info.IsDir() {
 			return nil
