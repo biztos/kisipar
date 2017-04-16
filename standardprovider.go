@@ -31,8 +31,8 @@ type BasicStub struct {
 // Path returns the request path of the stub.
 func (s *BasicStub) Path() string { return s.path }
 
-// TypeString returns the stringified type of the stub.
-func (s *BasicStub) TypeString() string { return fmt.Sprintf("%T", s) }
+// TypeString returns the stringified type of the stub: "BasicStub"
+func (s *BasicStub) TypeString() string { return "BasicStub" }
 
 // IsPageStub returns false for the BasicStub; use the StandardPageStub for
 // a simple page-based stub.
@@ -41,9 +41,16 @@ func (s *BasicStub) IsPageStub() bool { return false }
 // NewBasicStub returns a pointer to a BasicStub with the given path.
 func NewBasicStub(rpath string) *BasicStub { return &BasicStub{rpath} }
 
-// StandardPageStub is a stub based on StandardPage.  This means that every
-// StandardPageStub is both a Stub and a Page.
-type StandardPageStub StandardPage
+// StandardPageStub is a stub based on a StandardPage.
+type StandardPageStub struct {
+	StandardPage
+}
+
+// TypeString returns the stringified type of the stub: "StandardPageStub"
+func (s *StandardPageStub) TypeString() string { return "StandardPageStub" }
+
+// IsPageStub returns true for the StandardPageStub.
+func (s *StandardPageStub) IsPageStub() bool { return true }
 
 // IsPage always returns true for a StandardPageStub.
 func (sps *StandardPageStub) IsPage() bool { return true }
@@ -69,7 +76,7 @@ func (c *StandardContent) ContentType() string {
 	return c.ctype
 }
 
-// ModTime returns the modificatio time of the content. If it is the zero
+// ModTime returns the modification time of the content. If it is the zero
 // time then the current time is returned.
 func (c *StandardContent) ModTime() time.Time {
 	if c.mtime.IsZero() {
@@ -108,15 +115,7 @@ type StandardPage struct {
 
 // Stub returns a StandardPageStub from the StandardPage.
 func (p *StandardPage) Stub() *StandardPageStub {
-	return &StandardPageStub{
-		rpath:   p.Path(),
-		title:   p.Title(),
-		tags:    p.Tags(),
-		created: p.Created(),
-		updated: p.Updated(),
-		meta:    p.Meta(),
-		html:    "",
-	}
+	return &StandardPageStub{*p}
 }
 
 // Path returns the canonical request path of the page.
@@ -510,18 +509,58 @@ func (sp *StandardProvider) GetStub(rpath string) (Stub, error) {
 
 }
 
+// GetPageStubs returns a slice of all PageStubs "under" the given prefix,
+// following the logic described in GetStubs.
+//
+// This is the standard way of retrieving a list of Pages below the current
+// directory.
+func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
+	sp.mutex.RLock()
+	paths := []string{}
+	for _, path := range sp.paths {
+		if strings.HasPrefix(path, prefix) {
+			paths = append(paths, path)
+		}
+	}
+	pagestubs := []PageStub{}
+	for _, path := range paths {
+		fmt.Println("*", path)
+		if s, _ := sp.GetStub(path); s != nil {
+			// Only "real" page-backed PageStubs.
+			fmt.Println("+", path)
+			if s.IsPageStub() {
+				fmt.Println("**")
+				// if ps, ok := s.(PageStub); ok {
+				//     pagestubs = append(pagestubs, ps)
+				// }
+			} else {
+				fmt.Println("NOT PAGE STUB")
+			}
+		} else {
+			fmt.Println("-- no stub")
+		}
+	}
+	sp.mutex.RUnlock()
+
+	return pagestubs
+}
+
 // GetStubs returns a slice of Stub items for everything "under" the given
-// prefix, i.e. everything with a path having the given prefix.  It is
+// prefix, i.e. everything with a path having the given prefix. It is
 // usually wise to terminate the prefix with a slash, but this is up to the
-// template author.
+// template author.  If the prefix is the empty string then all available
+// Stubs will be returned.
 //
 // If nothing exists under the prefix, and empty slice is returned.  Thus
 // any "not found" must be implemented by the caller.
 //
-// Items are returned in string-sorted order by path.
+// Items are returned in string-sorted order by path.  Any item that does not
+// implement the Stubber interface is ignored.
 //
 // TODO: new type for []Stub, an interface, something that can deal with
 // iterators and so on.
+// TODO: build out the use-case for this, basically it's for stuff like
+// lists of images where the template knows the type but the system doesn't.
 func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
 	sp.mutex.RLock()
@@ -543,15 +582,16 @@ func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
 }
 
-// GetAll returns a slice of Pathers representing all items "under" the given
-// prefix, i.e. everything with a path having the given prefix.  It is
+// GetAll returns a slice of Pathers representing all items "under" the
+// given prefix, i.e. everything with a path having the given prefix. It is
 // usually wise to terminate the prefix with a slash, but this is up to the
-// template author.
+// template author. If the prefix is the empty string then all available
+// Stubs will be returned.
 //
 // Items that implement the Stubber interface are returned as stubs; all
 // others are returned as-is.
 //
-// If nothing exists under the prefix, and empty slice is returned.  Thus
+// If nothing exists under the prefix, and empty slice is returned. Thus
 // any "not found" must be implemented by the caller.
 //
 // This means the caller must care what kind of data is being returned, as

@@ -133,14 +133,19 @@ type Page interface {
 // useful in a listing items.
 type Stub interface {
 	Path() string       // Request path for Pather interface.
-	IsPageStub() bool   // True if it's really the stub of a Page,
+	IsPageStub() bool   // True if it's really the stub of a Page.
 	TypeString() string // Type as string, useful to templates.
 }
 
-// PageStub is a more detailed Stub, to be used for Pages.  In practice this
-// is usually implemented as an alias to the page type.  A PageStub may
-// be used for non-Page types, so the IsPageStub method should be trusted
-// over interface checks.
+// PageStub is a more detailed Stub, to be used for Pages. In practice this
+// is usually implemented as an alias to the page type. A PageStub may be
+// used for non-Page types that provide page-like metadata and content, e.g.
+// images or map entries. The IsPageStub method should return true if the
+// PageStub is backing a traditional Page, and should be trusted over
+// interface checks.
+//
+// TODO: consider ditching IsPageStub in favor of something else, like maybe
+// HasPage or IsTruePage in order to avoid confusion.
 type PageStub interface {
 	Path() string                 // Request path for Pather interface.
 	Title() string                // Title of the Page.
