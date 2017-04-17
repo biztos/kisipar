@@ -55,6 +55,10 @@ func main() {
 			if tmpl == nil {
 				log.Fatal("No template returned for " + p.Path())
 			}
+			// p.Render(w,tmpl) -- make more sense?
+			//
+			// It could dot-ify the page.  But what else goes in the Dot?
+			// Site, and Provider.
 			tmpl.Execute(w, p)
 			return
 		}
