@@ -43,15 +43,14 @@ func main() {
 				r.URL.Path, err.Error())
 		}
 
-		// Our YAML-based provider only knows about two item types.
-		if c, ok := item.(kisipar.Content); ok {
-			if ct := c.ContentType(); ct != "" {
-				w.Header().Set("Content-Type", ct)
-			}
-			http.ServeContent(w, r, "", c.ModTime(), c.ReadSeeker())
+		// The filesystem provider knows about Files and Pages.
+		if f, ok := item.(kisipar.File); ok {
+			log.Println(f.Path(), " -> ", f.FilePath())
+			http.ServeFile(w, r, f.FilePath())
 			return
 		}
 		if p, ok := item.(kisipar.Page); ok {
+			log.Println(p.Path(), " -> ", p.Title())
 			tmpl := provider.TemplateFor(p)
 			if tmpl == nil {
 				log.Fatal("No template returned for " + p.Path())

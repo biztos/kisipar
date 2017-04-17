@@ -173,6 +173,7 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 		"created": time.Time{},
 		"updated": time.Time{},
 		"meta":    map[string]interface{}{"foo": "bar"},
+		"html":    "<h1>hey</h1>",
 	}
 
 	tStr := map[string]string{
@@ -182,6 +183,7 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 		"created": "Time",
 		"updated": "Time",
 		"meta":    "string-interface map",
+		"html":    "string",
 	}
 	type NotMyType struct{}
 	for k, _ := range input {

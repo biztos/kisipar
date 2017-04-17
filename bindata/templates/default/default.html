@@ -11,7 +11,15 @@
 */}}<!doctype html>
 <html>
     <head>
-        <h1>{{ .Title }}</h1>
+        <title>{{ .Title }}</title>
+{{ template "style.html" }}
     </head>
-    <body>{{ .Html }}</body>
+    <body>
+        <div id="Header">
+            <h1>{{ .Title }}</h1>
+        </div>
+        <div id="Content">
+            {{ .HTML }}
+        </div>
+   </body>
 </html>

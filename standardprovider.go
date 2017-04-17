@@ -205,6 +205,7 @@ func NewStandardPage(rpath, title string, tags []string,
 //      "created": time.Now(),
 //      "updated": time.Now(),
 //      "meta": map[string]interface{}{"foo":"bar"},
+//      "html": "<h1>boo!</h1>",
 //  }
 func StandardPageFromData(m map[string]interface{}) (*StandardPage, error) {
 
@@ -255,6 +256,12 @@ func StandardPageFromData(m map[string]interface{}) (*StandardPage, error) {
 				p.meta = val
 			} else {
 				return nil, wrongTypeError(k, v, "string-interface map")
+			}
+		case "html":
+			if val, ok := v.(string); ok {
+				p.html = val
+			} else {
+				return nil, wrongTypeError(k, v, "string")
 			}
 		default:
 			// Ignore unknown keys, they're harmless.

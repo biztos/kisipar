@@ -244,11 +244,13 @@ func (fsp *FileSystemProvider) LoadContent() error {
 				//  "created": time.Now(),
 				//  "updated": time.Now(),
 				"meta": res.Meta,
+				"html": string(res.Content),
 			})
 			fsp.Add(p)
 
 		} else if ext == ".yml" || ext == ".yaml" {
 			// YAML page.
+			// TODO: parse it as a page, obviously.
 			rpath = strings.TrimSuffix(rpath, ext)
 			fsp.Add(NewStandardFile(rpath, path))
 		} else {
