@@ -14,6 +14,14 @@ import (
 	"github.com/biztos/kisipar"
 )
 
+func Test_TemplateThemes(t *testing.T) {
+
+	assert := assert.New(t)
+
+	exp := []string{"debug", "default", "naked", "wonky"}
+	assert.Equal(exp, kisipar.TemplateThemes(), "themes as expected")
+}
+
 func Test_TemplatesFromData_NilMap(t *testing.T) {
 
 	assert := assert.New(t)

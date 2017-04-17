@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/biztos/vebben"
@@ -21,6 +22,29 @@ var DefaultFuncMap = vebben.NewFuncMap()
 // XXXXX TODO
 func FuncMap() template.FuncMap {
 	return DefaultFuncMap // TODO: add functions
+}
+
+// TemplateThemes returns the list of available built-in template themes.
+// TODO: check that bindata/binsanity is correctly doing slash based paths
+// regardless of OS, otherwise this might break on Windows.
+func TemplateThemes() []string {
+	have := map[string]bool{}
+	for _, name := range AssetNames() {
+		if strings.HasPrefix(name, "templates/") {
+			ss := strings.Split(name, "/")
+			if len(ss) > 2 {
+				have[ss[1]] = true
+			}
+		}
+	}
+	names := make([]string, len(have))
+	i := 0
+	for name, _ := range have {
+		names[i] = name
+		i++
+	}
+	sort.Strings(names)
+	return names
 }
 
 // TemplatesFromData returns a set of templates under a master template.

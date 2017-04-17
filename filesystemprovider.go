@@ -24,6 +24,7 @@ import (
 type FileSystemProviderConfig struct {
 	ContentDir      string         // All content, parseable and static.
 	TemplateDir     string         // Templates, if any.
+	TemplateTheme   string         // Theme for default templates, if any.
 	Exclude         *regexp.Regexp // Exclude paths matching this regexp.
 	Include         *regexp.Regexp // Include paths matching this regexp.
 	AllowMetaErrors bool           // Don't fail on Page metadata errors.
@@ -64,7 +65,7 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 		return fmt.Errorf("Not a directory: %s", config.TemplateDir)
 	}
 
-	tmpl, _ := template.New("").Funcs(FuncMap()).Parse("")
+	tmpl := template.Must(template.New("").Funcs(FuncMap()).Parse(""))
 	walker := func(path string, info os.FileInfo, err error) error {
 
 		if info.IsDir() {
@@ -99,6 +100,49 @@ func (fsp *FileSystemProvider) LoadTemplates() error {
 	err = filepath.Walk(config.TemplateDir, walker)
 	if err != nil {
 		return fmt.Errorf("Error walking %s: %v", config.TemplateDir, err)
+	}
+
+	fsp.SetTemplate(tmpl)
+
+	return nil
+
+}
+
+// LoadInternalTemplates loads internal templates, which are available in
+// variations or themes.  The theme may be specified in the config's
+// TemplateTheme property.
+func (fsp *FileSystemProvider) LoadInternalTemplates() error {
+
+	theme := fsp.config.TemplateTheme
+	if theme == "" {
+		theme = "default"
+	}
+
+	// We must have internal assets for this or we return an error.
+	// The assets must match be under the theme path and end in .html,
+	// as we aren't doing anything complicated (at least not intentionally)
+	// with the built-in templates.
+	prefix := "templates/" + theme + "/"
+	paths := []string{}
+	for _, name := range AssetNames() {
+		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".html") {
+			paths = append(paths, name)
+		}
+	}
+	if len(paths) == 0 {
+		return fmt.Errorf("No templates available for theme %s.", theme)
+	}
+
+	// Parse the template assets.  Path should already be normalized to slash.
+	// We panic instead of surfacing errors because the internal templates
+	// should all be error-free (and this is exercised in the unit tests).
+	tmpl := template.Must(template.New("").Funcs(FuncMap()).Parse(""))
+	for _, path := range paths {
+
+		b := MustAsset(path)
+		path = strings.TrimPrefix(path, prefix)
+		template.Must(tmpl.New(path).Parse(string(b)))
+
 	}
 
 	fsp.SetTemplate(tmpl)
@@ -247,12 +291,25 @@ func LoadFileSystemProvider(config FileSystemProviderConfig) (*FileSystemProvide
 
 	fsp := NewFileSystemProvider(config)
 
-	// Load templates first, if defined.
-	if err := fsp.LoadTemplates(); err != nil {
-		return nil, err
+	// We are more likely to hit template errors than content errors so we
+	// start with Templates.
+	if config.TemplateDir == "" {
+		if err := fsp.LoadInternalTemplates(); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := fsp.LoadTemplates(); err != nil {
+			return nil, err
+		}
 	}
 
-	// Then content.
+	if config.TemplateDir != "" {
+
+	} else {
+
+	}
+
+	// Then load content.
 	if err := fsp.LoadContent(); err != nil {
 		return nil, err
 	}

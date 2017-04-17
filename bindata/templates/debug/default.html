@@ -1,0 +1,24 @@
+{{/*
+    
+    debug/default.html - "debug" theme default template for Kisipar.
+    ------------------
+    The debug theme is for... debugging! DO NOT USE in public-facing sites.
+    (Obviously.)
+
+*/}}<!doctype html>
+<html>
+    <head>
+        <h1>{{ .Title }}</h1>
+        <style type="text/css">
+            body {
+                font-family: monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>WONKY: {{ .Title }}</h1>
+        <div id="Content">
+            {{ .Html }}
+        </div>
+    </body>
+</html>

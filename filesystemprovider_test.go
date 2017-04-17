@@ -209,6 +209,54 @@ func Test_FileSystemProvider_LoadTemplates_Success(t *testing.T) {
 	}
 }
 
+func Test_FileSystemProvider_LoadInternalTemplates_ThemeError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Do all of them.
+	config := kisipar.FileSystemProviderConfig{TemplateTheme: "nonesuch"}
+	fsp := kisipar.NewFileSystemProvider(config)
+	err := fsp.LoadInternalTemplates()
+	if assert.Error(err) {
+		assert.Equal("No templates available for theme nonesuch.", err.Error(),
+			"error as expected")
+	}
+
+}
+
+func Test_FileSystemProvider_LoadInternalTemplates_Success(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// Do all of them.
+	themes := kisipar.TemplateThemes()
+	if len(themes) < 1 {
+		panic("no themes from TemplateThemes")
+	}
+	for _, theme := range themes {
+		config := kisipar.FileSystemProviderConfig{TemplateTheme: theme}
+		fsp := kisipar.NewFileSystemProvider(config)
+		err := fsp.LoadInternalTemplates()
+		if !assert.Nil(err, "no error") {
+			t.Log(err)
+		}
+	}
+
+}
+
+func Test_FileSystemProvider_LoadInternalTemplates_SuccessDefault(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{}
+	fsp := kisipar.NewFileSystemProvider(config)
+	err := fsp.LoadInternalTemplates()
+	if !assert.Nil(err, "no error") {
+		t.Log(err)
+	}
+
+}
+
 func Test_FileSystemProvider_LoadContent_NoContentDir(t *testing.T) {
 
 	assert := assert.New(t)
@@ -542,6 +590,23 @@ func Test_LoadFileSystemProvider_ContentError(t *testing.T) {
 
 	if assert.Error(err) {
 		assert.Regexp("^Error walking .*bad-yaml.md.*yaml", err.Error())
+	}
+}
+
+func Test_LoadFileSystemProvider_TemplateThemeError(t *testing.T) {
+
+	assert := assert.New(t)
+
+	config := kisipar.FileSystemProviderConfig{
+		ContentDir:    filepath.Join("testdata", "fsp-bad-content"),
+		TemplateTheme: "nonesuch",
+	}
+
+	_, err := kisipar.LoadFileSystemProvider(config)
+
+	if assert.Error(err) {
+		assert.Equal("No templates available for theme nonesuch.", err.Error(),
+			"error as expected")
 	}
 }
 
