@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	// Third-party packages:
-	//	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	// Own stuff:
 	"github.com/biztos/frostedmd"
@@ -31,6 +31,20 @@ type FileSystemProviderConfig struct {
 	AutoRefresh     bool           // Watch filesystem and refresh
 }
 
+// FileSystemProviderConfigFromData sets a config based on the values in data,
+// via a round-trip YAML conversion; ergo, keys should be lowercased.
+func FileSystemProviderConfigFromData(data map[string]interface{}) (*FileSystemProviderConfig, error) {
+	b, err := yaml.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &FileSystemProviderConfig{}
+	if err := yaml.Unmarshal(b, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
 // FileSystemProvider is a Provider loaded from the local file system. Its
 // items are stored in memory as Pages or Files, and may optionally be auto-
 // refreshed when the source directory changes.
@@ -43,6 +57,7 @@ type FileSystemProvider struct {
 	// Note to self: do this more! By not having a simple struct be a pointer
 	// we avoid all the crap around catching nil values, while losing...
 	// nothing.
+	// OR not?
 	config FileSystemProviderConfig
 }
 
@@ -273,9 +288,9 @@ func (fsp *FileSystemProvider) LoadContent() error {
 
 // NewFileSystemProvider returns a FileSystemProvider with the provided
 // config.  No action is taken; use LoadFileSystemProvider in most cases.
-func NewFileSystemProvider(config FileSystemProviderConfig) *FileSystemProvider {
+func NewFileSystemProvider(cfg *FileSystemProviderConfig) *FileSystemProvider {
 
-	return &FileSystemProvider{NewStandardProvider(), config}
+	return &FileSystemProvider{NewStandardProvider(), *cfg}
 
 }
 
@@ -289,13 +304,13 @@ func NewFileSystemProvider(config FileSystemProviderConfig) *FileSystemProvider 
 //
 // If the configured AutoRefresh is true, then both TemplateDir and ContentDir
 // are watched for changes and the content updated when needed.
-func LoadFileSystemProvider(config FileSystemProviderConfig) (*FileSystemProvider, error) {
+func LoadFileSystemProvider(cfg *FileSystemProviderConfig) (*FileSystemProvider, error) {
 
-	fsp := NewFileSystemProvider(config)
+	fsp := NewFileSystemProvider(cfg)
 
 	// We are more likely to hit template errors than content errors so we
 	// start with Templates.
-	if config.TemplateDir == "" {
+	if cfg.TemplateDir == "" {
 		if err := fsp.LoadInternalTemplates(); err != nil {
 			return nil, err
 		}
@@ -303,12 +318,6 @@ func LoadFileSystemProvider(config FileSystemProviderConfig) (*FileSystemProvide
 		if err := fsp.LoadTemplates(); err != nil {
 			return nil, err
 		}
-	}
-
-	if config.TemplateDir != "" {
-
-	} else {
-
 	}
 
 	// Then load content.

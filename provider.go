@@ -103,10 +103,10 @@ type Content interface {
 	ReadSeeker() io.ReadSeeker
 }
 
-// Handler defines a custom handler for a response, providing for full
-// customization of responses within the Provider itself.  The standard
+// PathHandler defines a custom response handler for a path, allowing for
+// full customization of responses within the Provider itself. The standard
 // use-case for this is writing to the Provider through POST requests.
-type Handler interface {
+type PathHandler interface {
 	Path() string
 	Func() func(http.ResponseWriter, *http.Request)
 }
