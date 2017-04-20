@@ -4,6 +4,7 @@
 package kisipar
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,9 +17,13 @@ type Handler struct {
 	site *Site
 }
 
-// NewHandler returns a Handler using the given Site.
-func NewHandler(s *Site) *Handler {
-	return &Handler{s}
+// NewHandler returns a Handler using the given Site, or an error if the
+// Site is nil.
+func NewHandler(s *Site) (*Handler, error) {
+	if s == nil {
+		return nil, errors.New("Site must not be nil")
+	}
+	return &Handler{s}, nil
 }
 
 // Error replies to the request with the given HTTP error code, error
