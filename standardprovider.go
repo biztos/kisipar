@@ -335,7 +335,7 @@ func NewStandardProvider() *StandardProvider {
 	}
 }
 
-// StandardProviderFromYaml returns a StandardProvider with Pages, Content and
+// StandardProviderFromYAML returns a StandardProvider with Pages, Content and
 // templates read from the supplied YAML input.  The YAML structure is:
 //    pages:
 //      /path/to/foo:
@@ -363,9 +363,9 @@ func NewStandardProvider() *StandardProvider {
 //
 // This is useful for testing and for placeholder and/or generated sites
 // with simple content.  It is NOT recommended complex scenarios.
-func StandardProviderFromYaml(src string) (*StandardProvider, error) {
+func StandardProviderFromYAML(src string) (*StandardProvider, error) {
 
-	type pageFromYaml struct {
+	type pageFromYAML struct {
 		Title   string
 		Tags    []string
 		Created time.Time
@@ -373,16 +373,16 @@ func StandardProviderFromYaml(src string) (*StandardProvider, error) {
 		Meta    map[string]interface{}
 		Html    string
 	}
-	type contentFromYaml struct {
+	type contentFromYAML struct {
 		Type    string
 		Content string
 	}
-	type fromYaml struct {
-		Pages     map[string]*pageFromYaml
-		Content   map[string]*contentFromYaml
+	type fromYAML struct {
+		Pages     map[string]*pageFromYAML
+		Content   map[string]*contentFromYAML
 		Templates map[string]string
 	}
-	target := fromYaml{}
+	target := fromYAML{}
 
 	if err := yaml.Unmarshal([]byte(src), &target); err != nil {
 		return nil, err

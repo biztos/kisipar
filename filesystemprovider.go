@@ -12,9 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	// Third-party packages:
-	"gopkg.in/yaml.v2"
-
 	// Own stuff:
 	"github.com/biztos/frostedmd"
 )
@@ -31,18 +28,110 @@ type FileSystemProviderConfig struct {
 	AutoRefresh     bool           // Watch filesystem and refresh
 }
 
-// FileSystemProviderConfigFromData sets a config based on the values in data,
-// via a round-trip YAML conversion; ergo, keys should be lowercased.
-func FileSystemProviderConfigFromData(data map[string]interface{}) (*FileSystemProviderConfig, error) {
-	b, err := yaml.Marshal(data)
+// NewFileSystemProviderConfig returns a FileSystemProviderConfig based on
+// the provided data, accepting strings for Regexp values.  Wrong-typed
+// items, as well as unknown keys, are treated as errors.
+func NewFileSystemProviderConfig(d map[string]interface{}) (*FileSystemProviderConfig, error) {
+	expected := map[string]bool{
+		"ContentDir":      true,
+		"TemplateDir":     true,
+		"TemplateTheme":   true,
+		"Exclude":         true,
+		"Include":         true,
+		"AllowMetaErrors": true,
+		"AutoRefresh":     true,
+	}
+	for k, _ := range d {
+		if !expected[k] {
+			return nil,
+				fmt.Errorf("Unexpected FileSystemProviderConfig key: %s", k)
+		}
+	}
+
+	cdir, err := mapString(d, "ContentDir")
 	if err != nil {
 		return nil, err
 	}
-	cfg := &FileSystemProviderConfig{}
-	if err := yaml.Unmarshal(b, cfg); err != nil {
+	tdir, err := mapString(d, "TemplateDir")
+	if err != nil {
 		return nil, err
 	}
+	theme, err := mapString(d, "TemplateTheme")
+	if err != nil {
+		return nil, err
+	}
+	exclude, err := mapRegexp(d, "Exclude")
+	if err != nil {
+		return nil, err
+	}
+	include, err := mapRegexp(d, "Include")
+	if err != nil {
+		return nil, err
+	}
+	metaerrs, err := mapBool(d, "AllowMetaErrors")
+	if err != nil {
+		return nil, err
+	}
+	refresh, err := mapBool(d, "AutoRefresh")
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &FileSystemProviderConfig{
+		ContentDir:      cdir,
+		TemplateDir:     tdir,
+		TemplateTheme:   theme,
+		Exclude:         exclude,
+		Include:         include,
+		AllowMetaErrors: metaerrs,
+		AutoRefresh:     refresh,
+	}
 	return cfg, nil
+
+}
+
+// This is arguably useful elsewhere... or I'm over-engineering the shit...
+// What I really want is to be able to marshal a map[string]interface
+// to a generic struct, while magically handling things like regexp.
+func mapString(d map[string]interface{}, k string) (string, error) {
+	v := d[k]
+	if v == nil {
+		return "", nil
+	}
+	if s, ok := v.(string); ok {
+		return s, nil
+	}
+	return "", fmt.Errorf("%s must be a string, not %T.", k, v)
+}
+func mapBool(d map[string]interface{}, k string) (bool, error) {
+	v := d[k]
+	if v == nil {
+		return false, nil
+	}
+	if b, ok := v.(bool); ok {
+		return b, nil
+	}
+	return false, fmt.Errorf("%s must be a bool, not %T.", k, v)
+}
+func mapRegexp(d map[string]interface{}, k string) (*regexp.Regexp, error) {
+	v := d[k]
+	if v == nil {
+		return nil, nil
+	}
+	if r, ok := v.(*regexp.Regexp); ok {
+		return r, nil
+	}
+	if s, ok := v.(string); ok {
+		r, err := regexp.Compile(s)
+		if err != nil {
+			return nil,
+				fmt.Errorf("%s is not a valid regexp string: %s", k, err.Error())
+		}
+		return r, nil
+	}
+
+	return nil,
+		fmt.Errorf("%s is neither a *regexp.Regexp nor a string, but a %T.", k, v)
 }
 
 // FileSystemProvider is a Provider loaded from the local file system. Its

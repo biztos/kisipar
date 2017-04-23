@@ -28,7 +28,7 @@ func NewHandler(s *Site) (*Handler, error) {
 
 // Error replies to the request with the given HTTP error code, error
 // message, and optional detail. A StandardPage is created to hold the
-// error, with a Path of "/error/<code>" (e.g. "error/404") and msg as its
+// error, with a Path of "/errors/<code>" (e.g. "error/404") and msg as its
 // Title. The detail is stored in the Page HTML. A template is sought for
 // the error based on the Path as noted above. If none is found, then
 // http.Error is used to serve the error; however, note that the default
@@ -42,7 +42,7 @@ func (h *Handler) Error(w http.ResponseWriter, r *http.Request, code int, msg, d
 
 	p, _ := StandardPageFromData(
 		map[string]interface{}{
-			"path":    fmt.Sprintf("/error/%d", code),
+			"path":    fmt.Sprintf("/errors/%d", code),
 			"title":   msg,
 			"created": time.Now(),
 			"updated": time.Now(),

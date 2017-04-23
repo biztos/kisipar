@@ -11,7 +11,7 @@ import (
 func Example() {
 
 	// TODO: a real example, probably with Serve.
-	ds, err := kisipar.StandardProviderFromYaml("# nothing yet")
+	ds, err := kisipar.StandardProviderFromYAML("# nothing yet")
 	if err != nil {
 		fmt.Println(err.Error())
 	}

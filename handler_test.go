@@ -72,3 +72,48 @@ func Test_Handler_Error_Fallback(t *testing.T) {
 	assert.Equal(exp, string(body), "body as expected")
 	assert.Regexp("^.* GET http://biztos.com/foo 599 oops: badness", buf.String(), "error logged as expected")
 }
+
+func Test_Handler_Error_WithTemplate(t *testing.T) {
+
+	assert := assert.New(t)
+
+	// We need a Site with a Provider that has an error template.
+	yaml := `# yaml
+templates:
+    /errors/599.html: |
+        Path: {{ .Path }}
+        Error: {{ .Title }}
+        Detail: {{ .HTML }}`
+	sp, err := kisipar.StandardProviderFromYAML(yaml)
+	if err != nil {
+		assert.FailNow(err.Error())
+	}
+
+	s := &kisipar.Site{
+		Config:   &kisipar.Config{Port: 1000},
+		Provider: sp,
+	}
+	h, err := kisipar.NewHandler(s)
+	if !assert.Nil(err, "no error") {
+		assert.FailNow(err.Error())
+	}
+
+	// Rig up test:
+	// TODO: logger!
+	r := httptest.NewRequest("GET", "http://biztos.com/foo", nil)
+	w := httptest.NewRecorder()
+	buf := new(bytes.Buffer)
+	log.SetOutput(buf)
+
+	// Test it with a fake code as well, just because:
+	h.Error(w, r, 599, "oops", "badness")
+
+	// NOTE: We do not check the headers because (apparently) the recorder
+	// doesn't automatically set them.
+	exp := "Path: /errors/599\nError: oops\nDetail: badness"
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+	assert.Equal(599, resp.StatusCode, "code passed through")
+	assert.Equal(exp, string(body), "body as expected")
+	assert.Regexp("^.* GET http://biztos.com/foo 599 oops: badness", buf.String(), "error logged as expected")
+}

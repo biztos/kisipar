@@ -68,7 +68,7 @@ func (s *Site) InitProvider() error {
 	case "":
 		return errors.New("Provider missing from Config.")
 	case "filesystem":
-		cfg, err := FileSystemProviderConfigFromData(s.Config.ProviderConfig)
+		cfg, err := NewFileSystemProviderConfig(s.Config.ProviderConfig)
 		if err != nil {
 			return fmt.Errorf("ProviderConfig error: %s", err)
 		}

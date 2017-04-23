@@ -18,6 +18,226 @@ import (
 	"github.com/biztos/kisipar"
 )
 
+func Test_NewFileSystemProviderConfig_UnknownKey(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"fremd": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("Unexpected FileSystemProviderConfig key: fremd",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_ContentDirNotString(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"ContentDir": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("ContentDir must be a string, not bool.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_TemplateDirNotString(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"TemplateDir": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("TemplateDir must be a string, not bool.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_TemplateThemeNotString(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"TemplateTheme": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("TemplateTheme must be a string, not bool.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_ExcludeWrongType(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"Exclude": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("Exclude is neither a *regexp.Regexp nor a string, but a bool.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_ExcludeBadRegex(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"Exclude": "^foo[a"}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Regexp("^Exclude is not a valid regexp string",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_IncludeWrongType(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"Include": true}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("Include is neither a *regexp.Regexp nor a string, but a bool.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_IncludeBadRegex(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"Include": "^foo[a"}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Regexp("^Include is not a valid regexp string",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_AllowMetaErrorsNotBool(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"AllowMetaErrors": 123}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("AllowMetaErrors must be a bool, not int.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_AutoRefreshNotBool(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{"AutoRefresh": 123}
+	_, err := kisipar.NewFileSystemProviderConfig(d)
+	if assert.Error(err) {
+		assert.Equal("AutoRefresh must be a bool, not int.",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewFileSystemProviderConfig_SuccessWithEmpty(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{}
+	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	if !assert.Nil(err) {
+		assert.FailNow(err.Error())
+	}
+
+	exp := &kisipar.FileSystemProviderConfig{}
+	assert.Equal(exp, cfg, "got empty config")
+
+}
+
+func Test_NewFileSystemProviderConfig_SuccessWithZeroValues(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{
+		"ContentDir":      "",
+		"TemplateDir":     "",
+		"TemplateTheme":   "",
+		"Exclude":         nil,
+		"Include":         nil,
+		"AllowMetaErrors": false,
+		"AutoRefresh":     false,
+	}
+	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	if !assert.Nil(err) {
+		assert.FailNow(err.Error())
+	}
+
+	exp := &kisipar.FileSystemProviderConfig{}
+	assert.Equal(exp, cfg, "got empty config")
+
+}
+
+func Test_NewFileSystemProviderConfig_SuccessWithNonzeroValues(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{
+		"ContentDir":      "cdir/",
+		"TemplateDir":     "tdir/",
+		"TemplateTheme":   "happy",
+		"Exclude":         regexp.MustCompile("ex"),
+		"Include":         regexp.MustCompile("in"),
+		"AllowMetaErrors": true,
+		"AutoRefresh":     true,
+	}
+	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	if !assert.Nil(err) {
+		assert.FailNow(err.Error())
+	}
+
+	exp := &kisipar.FileSystemProviderConfig{
+		ContentDir:      "cdir/",
+		TemplateDir:     "tdir/",
+		TemplateTheme:   "happy",
+		Exclude:         regexp.MustCompile("ex"),
+		Include:         regexp.MustCompile("in"),
+		AllowMetaErrors: true,
+		AutoRefresh:     true,
+	}
+	assert.Equal(exp, cfg, "got expected config")
+
+}
+
+func Test_NewFileSystemProviderConfig_SuccessWithStringRegexps(t *testing.T) {
+
+	assert := assert.New(t)
+
+	d := map[string]interface{}{
+		"Exclude": "ex",
+		"Include": "in",
+	}
+	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	if !assert.Nil(err) {
+		assert.FailNow(err.Error())
+	}
+
+	exp := &kisipar.FileSystemProviderConfig{
+		Exclude: regexp.MustCompile("ex"),
+		Include: regexp.MustCompile("in"),
+	}
+	assert.Equal(exp, cfg, "got expected config")
+
+}
+
 func Test_NewFileSystemProvider(t *testing.T) {
 
 	assert := assert.New(t)

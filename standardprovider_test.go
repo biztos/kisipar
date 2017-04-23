@@ -390,20 +390,20 @@ func Test_NewStandardProvider(t *testing.T) {
 		sp.String(), "Stringifies as expected")
 }
 
-func Test_StandardProviderFromYaml_YamlError(t *testing.T) {
+func Test_StandardProviderFromYAML_YAMLError(t *testing.T) {
 
 	assert := assert.New(t)
 
 	yaml := `# I am (not really proper) YAML!
 foo: {-- ,]`
 
-	_, err := kisipar.StandardProviderFromYaml(yaml)
+	_, err := kisipar.StandardProviderFromYAML(yaml)
 	if assert.Error(err) {
 		assert.Regexp("yaml", err, "Error is useful")
 	}
 }
 
-func Test_StandardProviderFromYaml_TemplateError(t *testing.T) {
+func Test_StandardProviderFromYAML_TemplateError(t *testing.T) {
 
 	assert := assert.New(t)
 
@@ -416,13 +416,13 @@ templates:
         {{ foreach .Nope }}
 `
 
-	_, err := kisipar.StandardProviderFromYaml(yaml)
+	_, err := kisipar.StandardProviderFromYAML(yaml)
 	if assert.Error(err) {
 		assert.Regexp("template", err, "Error is useful")
 	}
 }
 
-func Test_StandardProviderFromYaml(t *testing.T) {
+func Test_StandardProviderFromYAML(t *testing.T) {
 
 	assert := assert.New(t)
 
@@ -452,7 +452,7 @@ templates:
         <h1>Hello {{ .Title }}</h1>
 `
 
-	sp, err := kisipar.StandardProviderFromYaml(yaml)
+	sp, err := kisipar.StandardProviderFromYAML(yaml)
 	if assert.Nil(err, "no error") {
 
 		assert.Regexp("<StandardProvider with 3 items, updated .*>",
@@ -698,7 +698,7 @@ templates:
         HERE
 `
 
-	sp, err := kisipar.StandardProviderFromYaml(yaml)
+	sp, err := kisipar.StandardProviderFromYAML(yaml)
 	if err != nil {
 		panic(err)
 	}
