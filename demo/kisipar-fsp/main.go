@@ -1,6 +1,5 @@
-// fsp -- a demo site running off the file system, sans frills.
-// ---
-// TODO: use kisipar.serve etc when available.
+// kisipar-fsp -- a demo site running off the file system, sans frills.
+// -----------
 // TODO: simple opts for file, port (use docopt?)
 
 // Kisipar demo filesystem-based server supporting Frosted Markdown and YAML.
@@ -15,7 +14,7 @@ import (
 
 func main() {
 
-	usage := "Usage: fsp CONTENT-DIR [TEMPLATE-DIR]"
+	usage := "Usage: kisipar-fsp CONTENT-DIR [TEMPLATE-DIR]"
 	cdir := ""
 	tdir := ""
 	if len(os.Args) == 3 {
