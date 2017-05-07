@@ -652,6 +652,11 @@ func (sp *StandardProvider) TemplateFor(p Pather) *template.Template {
 	}
 }
 
+// TemplateForPath returns the template for the given path, via PathTemplate.
+func (sp *StandardProvider) TemplateForPath(p string) *template.Template {
+	return PathTemplate(sp.template, p)
+}
+
 // SetTemplate sets the internal template returned by Template.
 func (sp *StandardProvider) SetTemplate(tmpl *template.Template) {
 	sp.mutex.Lock()

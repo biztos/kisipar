@@ -27,6 +27,7 @@ func main() {
 	}
 	log.Println("Loading...")
 	site, err := kisipar.NewSite(&kisipar.Config{
+		Name:     "kisipar-fsp demo",
 		Port:     8080,
 		Provider: "filesystem",
 		ProviderConfig: map[string]interface{}{

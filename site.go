@@ -142,8 +142,9 @@ func (s *Site) InitServer() error {
 // os.Stat; the error is testable with os.IsNotExist.
 func (s *Site) StaticPath(file string) (string, error) {
 
+	// You should have a config, normally, but we can live without it here.
 	if s.Config == nil {
-		return "", errors.New("Config must not be nil")
+		return "", os.ErrNotExist
 	}
 
 	if s.Config.StaticDir == "" {
@@ -156,8 +157,7 @@ func (s *Site) StaticPath(file string) (string, error) {
 	}
 
 	if s.Config.ListStatic == false {
-		file = strings.TrimSuffix(file, "/")
-
+		file = strings.TrimSuffix(file, "/") + ".html"
 	}
 
 	file = filepath.Join(dir, file)

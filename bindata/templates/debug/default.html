@@ -8,7 +8,7 @@
 */}}<!doctype html>
 <html>
     <head>
-        <h1>{{ .Title }}</h1>
+        <h1>{{ .Page.Title }}</h1>
         <style type="text/css">
             body {
                 font-family: monospace;
@@ -16,9 +16,9 @@
         </style>
     </head>
     <body>
-        <h1>WONKY: {{ .Title }}</h1>
+        <h1>WONKY: {{ .Page.Title }}</h1>
         <div id="Content">
-            {{ .Html }}
+            {{ .Page.Html }}
         </div>
     </body>
 </html>

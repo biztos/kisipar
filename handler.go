@@ -5,7 +5,6 @@ package kisipar
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -25,17 +24,14 @@ type Handler struct {
 // Site is nil or its Provider is nil.
 func NewHandler(s *Site) (*Handler, error) {
 	if s == nil {
-		return nil, errors.New("Site must not be nil.")
+		panic("Site must not be nil.")
 	}
 	if s.Provider == nil {
-		return nil, errors.New("Site Provider must not be nil.")
+		panic("Site.Provider must not be nil.")
 	}
 	return &Handler{Site: s}, nil
 }
 
-// NO NO NO -- check templates FIRST because that's going to be faster than
-// looking up something in the provider.
-//
 // ServeHTTP implements the http.Handler interface, and responds to a request
 // using the standard Kisipar logic:
 //
@@ -44,27 +40,21 @@ func NewHandler(s *Site) (*Handler, error) {
 //      text/plain response is served with the Site name as sole content,
 //      with the name defaulting to "Kisipar."
 //
-//   2. If the Site has a configured StaticDir and there is an exact match for
-//      the request path under that directory, then it is served as a file.
-//      If the path has no extension then an extension of ".html" is added
-//      before checking.  Trailing slashes are stripped.
+//   2. If the Site has a configured StaticDir then the file is checked
+//      using the Site's StaticPath method; see there for configuration
+//      details.  If StaticPath returns a path and no error, the file is
+//      delivered; errors are ignored.
 //
 //   3. If there is a template matching the request path then we execute that
-//      template with a Dot having no page (the template may fetch Stub slices
-//      through the Dot's Provider).  The template is first sought with an
-//      extension of ".html" and then without, i.e. "/path/to/tmpl.html" first
-//      and then "/path/to/tmpl" as a fallback.
+//      template.  The template is sought via the Provider's TemplateFor
+//      method.
 //
-//   2. If the Provider returns a page via Get() or GetSince() then it is
+//   4. If the Provider returns a page via Get() or GetSince() then it is
 //      served according to its type (Redirect, File, Content, or Page).
 //      GetSince is used if there is an If-Modified-Since header in the
 //      request and its timestamp can be parsed; in that case, a response of
 //      304 Not Modified may be served.
 //
-
-//
-//   4. If none of the above conditions is met, the Error method is called
-//      with a code of 404 and a message of "Not Found" and no detail.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	s := h.Site
@@ -72,15 +62,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Root path is special:
 	if path == "/" {
-
-		if tmpl := s.Provider.TemplateFor(NewBasicPather("/index.html")); tmpl != nil {
+		if tmpl := s.Provider.TemplateForPath("/index.html"); tmpl != nil {
 
 			dot := &Dot{
 				Request:  r,
 				Config:   s.Config,
 				Provider: s.Provider,
 			}
-			h.ServeTemplate(w, dot, tmpl)
+			h.ServeTemplate(w, dot, tmpl, http.StatusOK)
 			return
 		}
 
@@ -98,19 +87,103 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: 304's GetSince etc.
+	// We should have quick access to the template if it's there.
+	if tmpl := s.Provider.TemplateForPath(path); tmpl != nil {
+		dot := &Dot{
+			Request:  r,
+			Config:   s.Config,
+			Provider: s.Provider,
+		}
+		h.ServeTemplate(w, dot, tmpl, http.StatusOK)
+		return
+	}
+
+	// Freshness is up to the Provider.  We ignore range requests.
+	if r.Header.Get("Range") == "" {
+		if ims := r.Header.Get("If-Modified-Since"); ims != "" {
+			if ts, err := http.ParseTime(ims); err == nil {
+				// We have a time, use it.
+				p, err := h.Site.Provider.GetSince(r.URL.Path, ts)
+				if err != nil && !IsNotExist(err) {
+					// Uh-oh, data-provider error!
+					h.Error(w, r, http.StatusInternalServerError,
+						"Data provider error.", err.Error())
+					return
+				}
+				h.ServeItem(w, r, p)
+				return
+			}
+		}
+	}
+
+	// Final check: get it from the provider.
 	p, err := h.Site.Provider.Get(r.URL.Path)
-	if err != nil && !IsNotExist(err) {
-		// Uh-oh, data-provider error!
+	if err != nil {
+		if IsNotExist(err) {
+			h.Error(w, r, http.StatusNotFound, "Not Found", "")
+		} else {
+			// Data-provider error!
+			h.Error(w, r, http.StatusInternalServerError,
+				"Data provider error.", err.Error())
+		}
+		return
+	}
+
+	h.ServeItem(w, r, p)
+}
+
+// ServeItem serves a Pather which may be a Page, Content, File, Path,
+// PathHandler or Redirect.
+func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
+
+	if h.Site == nil {
+		panic("Site must not be nil.")
+	}
+	if h.Site.Provider == nil {
+		panic("Site.Provider must not be nil.")
+	}
+
+	switch item := p.(type) {
+	case Page:
+
+		if tmpl := h.Site.Provider.TemplateFor(item); tmpl != nil {
+			dot := &Dot{
+				Request:  r,
+				Config:   h.Site.Config,
+				Provider: h.Site.Provider,
+				Page:     item,
+			}
+			h.ServeTemplate(w, dot, tmpl, http.StatusOK)
+		}
+
+		// In normal operation you'd always have a template, because the
+		// provider will do something reasonable for the default.  But if
+		// not then not: serve the plain HTML without any template and hope
+		// for the best.
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte(item.HTML()))
+	case Content:
+		if ct := item.ContentType(); ct != "" {
+			w.Header().Set("Content-Type", ct)
+		}
+		http.ServeContent(w, r, item.Path(), item.ModTime(), item.ReadSeeker())
+	case File:
+		http.ServeFile(w, r, item.FilePath())
+	case PathHandler:
+		item.Func()(w, r)
+	case Redirect:
+		code := http.StatusFound
+		if item.Permanent() {
+			code = http.StatusMovedPermanently
+		}
+		http.Redirect(w, r, item.Location(), code)
+	default:
+		detail := fmt.Sprintf(
+			"Pather at %s has type %T; handler can not Serve it.",
+			p.Path(), p)
 		h.Error(w, r, http.StatusInternalServerError,
-			"Data provider error.", err.Error())
-		return
+			"Data provider error.", detail)
 	}
-	if p != nil {
-		fmt.Fprintln(w, p.Path())
-		return
-	}
-	h.Error(w, r, http.StatusNotFound, "Not Found", "")
 
 }
 
@@ -137,22 +210,20 @@ func (h *Handler) Error(w http.ResponseWriter, r *http.Request, code int, msg, d
 			"html":    detail,
 		},
 	)
-	dot := &Dot{
-		Request:  r,
-		Config:   h.Site.Config,
-		Provider: h.Site.Provider,
-		Page:     p,
-	}
-	tmpl := h.Site.Provider.TemplateFor(p)
-	if tmpl == nil {
-		// Fall back to simple error.
-		http.Error(w, msg, code)
+	if tmpl := h.Site.Provider.TemplateFor(p); tmpl != nil {
+		dot := &Dot{
+			Request:  r,
+			Config:   h.Site.Config,
+			Provider: h.Site.Provider,
+			Page:     p,
+		}
+		h.ServeTemplate(w, dot, tmpl, code)
 		return
 	}
 
-	// Let's not forget our HTTP status!
-	w.WriteHeader(code)
-	tmpl.Execute(w, dot)
+	// Fall back to simple error.
+	http.Error(w, msg, code)
+	return
 
 }
 
@@ -165,7 +236,7 @@ func (h *Handler) Error(w http.ResponseWriter, r *http.Request, code int, msg, d
 //
 // The Content-Type is set to the standard MIME type for the template name's
 // extension, or text/html by default.
-func (h *Handler) ServeTemplate(w http.ResponseWriter, dot *Dot, tmpl *template.Template) {
+func (h *Handler) ServeTemplate(w http.ResponseWriter, dot *Dot, tmpl *template.Template, code int) {
 
 	// Set the content type based on the template name.
 	ct := "text/html; charset=utf-8"
@@ -183,6 +254,7 @@ func (h *Handler) ServeTemplate(w http.ResponseWriter, dot *Dot, tmpl *template.
 	}
 
 	w.Header().Set("Content-Type", ct)
+	w.WriteHeader(code)
 
 	// The unsafe route for the speed-conscious:
 	if h.Site.Config.FastTemplates {

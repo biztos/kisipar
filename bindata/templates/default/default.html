@@ -11,15 +11,15 @@
 */}}<!doctype html>
 <html>
     <head>
-        <title>{{ .Title }}</title>
+        <title>{{ .Page.Title }}</title>
 {{ template "style.html" }}
     </head>
     <body>
         <div id="Header">
-            <h1>{{ .Title }}</h1>
+            <h1>{{ .Page.Title }}</h1>
         </div>
         <div id="Content">
-            {{ .HTML }}
+            {{ .Page.HTML }}
         </div>
    </body>
 </html>

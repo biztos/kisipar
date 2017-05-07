@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	// Helpful:
+	"github.com/biztos/testig"
 	"github.com/stretchr/testify/assert"
 
 	// Under test:
@@ -19,23 +20,17 @@ import (
 
 func Test_NewHandler_ErrorNoSite(t *testing.T) {
 
-	assert := assert.New(t)
-
-	_, err := kisipar.NewHandler(nil)
-	if assert.Error(err) {
-		assert.Equal("Site must not be nil.", err.Error(), "error useful")
-	}
+	panicky := func() { kisipar.NewHandler(nil) }
+	testig.AssertPanicsWith(t, panicky, "Site must not be nil.",
+		"Nil Site caught")
 
 }
 
 func Test_NewHandler_ErrorNoProvider(t *testing.T) {
 
-	assert := assert.New(t)
-
-	_, err := kisipar.NewHandler(&kisipar.Site{})
-	if assert.Error(err) {
-		assert.Equal("Site Provider must not be nil.", err.Error(), "error useful")
-	}
+	panicky := func() { kisipar.NewHandler(&kisipar.Site{}) }
+	testig.AssertPanicsWith(t, panicky, "Site.Provider must not be nil.",
+		"Nil Provider caught")
 
 }
 
