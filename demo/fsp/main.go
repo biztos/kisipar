@@ -8,7 +8,6 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/biztos/kisipar"
@@ -17,57 +16,27 @@ import (
 func main() {
 
 	usage := "Usage: fsp CONTENT-DIR [TEMPLATE-DIR]"
-	cfg := kisipar.FileSystemProviderConfig{}
+	cdir := ""
+	tdir := ""
 	if len(os.Args) == 3 {
-		cfg.ContentDir = os.Args[1]
-		cfg.TemplateDir = os.Args[2]
+		cdir = os.Args[1]
+		tdir = os.Args[2]
 	} else if len(os.Args) == 2 {
-		cfg.ContentDir = os.Args[1]
+		cdir = os.Args[1]
 	} else {
 		log.Fatalf("Wrong number of args.\n%s\n", usage)
 	}
 	log.Println("Loading...")
-	provider, err := kisipar.LoadFileSystemProvider(cfg)
+	site, err := kisipar.NewSite(&kisipar.Config{
+		Port:     8080,
+		Provider: "filesystem",
+		ProviderConfig: map[string]interface{}{
+			"ContentDir":  cdir,
+			"TemplateDir": tdir,
+		},
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-
-		item, err := provider.Get(r.URL.Path)
-		if kisipar.IsNotExist(err) {
-			http.NotFound(w, r)
-			return
-		}
-		if err != nil {
-			log.Fatalf("Error from Get for path %s: %s",
-				r.URL.Path, err.Error())
-		}
-
-		// The filesystem provider knows about Files and Pages.
-		if f, ok := item.(kisipar.File); ok {
-			log.Println(f.Path(), " -> ", f.FilePath())
-			http.ServeFile(w, r, f.FilePath())
-			return
-		}
-		if p, ok := item.(kisipar.Page); ok {
-			log.Println(p.Path(), " -> ", p.Title())
-			tmpl := provider.TemplateFor(p)
-			if tmpl == nil {
-				log.Fatal("No template returned for " + p.Path())
-			}
-			// p.Render(w,tmpl) -- make more sense?
-			//
-			// It could dot-ify the page.  But what else goes in the Dot?
-			// Site, and Provider.
-			tmpl.Execute(w, p)
-			return
-		}
-		// Any other type means we forgot to keep the code up to date. :-(
-		log.Fatalf("Unexpected type for %s: %T", item.Path(), item)
-
-	})
-
-	log.Println("Listening on port 8080.")
-
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(site.Serve())
 }

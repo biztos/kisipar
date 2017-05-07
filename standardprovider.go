@@ -23,6 +23,19 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// BasicPather is a minimal Pather.
+type BasicPather struct {
+	path string
+}
+
+// Path returns the path of the BasicPather.
+func (p *BasicPather) Path() string { return p.path }
+
+// NewBasicPather returns a BasicPather with path p.
+func NewBasicPather(p string) *BasicPather {
+	return &BasicPather{p}
+}
+
 // BasicStub is a minimal immutable non-Page Stub.
 type BasicStub struct {
 	path string
@@ -629,9 +642,14 @@ func (sp *StandardProvider) Template() *template.Template {
 }
 
 // TemplateFor returns the template that should be used for the given
-// Page.  It is a convenience wrapper for the PageTemplate function.
-func (sp *StandardProvider) TemplateFor(p Page) *template.Template {
-	return PageTemplate(sp.template, p)
+// Pather.  If the Pather is a Page then PageTemplate is used; otherwise
+// PathTemplate.
+func (sp *StandardProvider) TemplateFor(p Pather) *template.Template {
+	if page, ok := p.(Page); ok {
+		return PageTemplate(sp.template, page)
+	} else {
+		return PathTemplate(sp.template, p.Path())
+	}
 }
 
 // SetTemplate sets the internal template returned by Template.

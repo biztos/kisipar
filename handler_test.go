@@ -23,7 +23,18 @@ func Test_NewHandler_ErrorNoSite(t *testing.T) {
 
 	_, err := kisipar.NewHandler(nil)
 	if assert.Error(err) {
-		assert.Equal("Site must not be nil", err.Error(), "error useful")
+		assert.Equal("Site must not be nil.", err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewHandler_ErrorNoProvider(t *testing.T) {
+
+	assert := assert.New(t)
+
+	_, err := kisipar.NewHandler(&kisipar.Site{})
+	if assert.Error(err) {
+		assert.Equal("Site Provider must not be nil.", err.Error(), "error useful")
 	}
 
 }
@@ -32,7 +43,8 @@ func Test_NewHandler_Success(t *testing.T) {
 
 	assert := assert.New(t)
 
-	_, err := kisipar.NewHandler(&kisipar.Site{})
+	s := &kisipar.Site{Provider: &kisipar.StandardProvider{}}
+	_, err := kisipar.NewHandler(s)
 	if !assert.Nil(err, "no error") {
 		assert.FailNow(err.Error())
 	}
@@ -81,9 +93,9 @@ func Test_Handler_Error_WithTemplate(t *testing.T) {
 	yaml := `# yaml
 templates:
     /errors/599.html: |
-        Path: {{ .Path }}
-        Error: {{ .Title }}
-        Detail: {{ .HTML }}`
+        Path: {{ .Page.Path }}
+        Error: {{ .Page.Title }}
+        Detail: {{ .Page.HTML }}`
 	sp, err := kisipar.StandardProviderFromYAML(yaml)
 	if err != nil {
 		assert.FailNow(err.Error())

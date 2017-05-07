@@ -4,6 +4,7 @@ package kisipar_test
 
 import (
 	// Standard:
+	"path/filepath"
 	"testing"
 
 	// Helpful:
@@ -46,6 +47,54 @@ func Test_NewSite_ErrorNoProvider(t *testing.T) {
 	if assert.Error(err) {
 		assert.Equal("Provider missing from Config.", err.Error(),
 			"error useful")
+	}
+
+}
+
+func Test_NewSite_ErrorUnsupportedProvider(t *testing.T) {
+
+	assert := assert.New(t)
+
+	cfg := &kisipar.Config{Provider: "nonesuch", Port: 1111}
+	_, err := kisipar.NewSite(cfg)
+	if assert.Error(err) {
+		assert.Equal("Unsupported Provider: nonesuch", err.Error(),
+			"error useful")
+	}
+
+}
+
+func Test_NewSite_ErrorBadProviderConfig(t *testing.T) {
+
+	assert := assert.New(t)
+
+	cfg := &kisipar.Config{
+		Port:           1234,
+		Provider:       "filesystem",
+		ProviderConfig: map[string]interface{}{"Fremd": "Körper"},
+	}
+	_, err := kisipar.NewSite(cfg)
+	if assert.Error(err) {
+		assert.Equal("ProviderConfig error: Unexpected FileSystemProviderConfig key: Fremd",
+			err.Error(), "error useful")
+	}
+
+}
+
+func Test_NewSite_ErrorBadTemplates(t *testing.T) {
+
+	assert := assert.New(t)
+
+	cfg := &kisipar.Config{
+		Port:     1234,
+		Provider: "filesystem",
+		ProviderConfig: map[string]interface{}{
+			"TemplateDir": filepath.Join("testdata", "fsp-bad-templates"),
+		},
+	}
+	_, err := kisipar.NewSite(cfg)
+	if assert.Error(err) {
+		assert.Regexp("Template", err.Error(), "error useful")
 	}
 
 }

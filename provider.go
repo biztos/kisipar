@@ -59,8 +59,8 @@ type Provider interface {
 	// ...?
 
 	// Templates:
-	Template() *template.Template
-	TemplateFor(Page) *template.Template
+	Template() *template.Template          // Return the master template.
+	TemplateFor(Pather) *template.Template // Find a template for an item.
 }
 
 // Pather is the minimum interface for a Provider item.  Every item must

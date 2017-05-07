@@ -149,20 +149,20 @@ func PageTemplate(tmpl *template.Template, p Page) *template.Template {
 	if p.Path() != "/" {
 
 		// An exact-ish match makes things easy.
-		if match := lookupPathVariations(tmpl, p.Path()); match != nil {
+		if match := PathTemplate(tmpl, p.Path()); match != nil {
 			return match
 		}
 
 		// Otherwise, up we go!
 		for d := path.Dir(p.Path()); d != "/" && d != "" && d != "."; d = path.Dir(d) {
-			if match := lookupPathVariations(tmpl, d); match != nil {
+			if match := PathTemplate(tmpl, d); match != nil {
 				return match
 			}
 		}
 	}
 
 	// Fallback is the default.html or similar:
-	if match := lookupPathVariations(tmpl, "/default"); match != nil {
+	if match := PathTemplate(tmpl, "/default"); match != nil {
 		return match
 	}
 
@@ -171,11 +171,28 @@ func PageTemplate(tmpl *template.Template, p Page) *template.Template {
 
 }
 
-func lookupPathVariations(t *template.Template, p string) *template.Template {
+// PathTemplate returns a template looked up in template t for path p, with
+// the following variations tried on p:
+//  1. Exact match.
+//  2. Trimmed leading slash.
+//  3. Addition of .html extension.
+//  4. Trimmed leading slash and addition of .html extension.
+func PathTemplate(t *template.Template, p string) *template.Template {
+
+	if t == nil {
+		return nil
+	}
 
 	if tmpl := t.Lookup(p); tmpl != nil {
 		return tmpl
 	}
+
+	// Special case for the root (don't try empty string, etc).
+	if p == "/" {
+		return nil
+	}
+
+	// Variations:
 	if strings.HasPrefix(p, "/") {
 		if tmpl := t.Lookup(strings.TrimPrefix(p, "/")); tmpl != nil {
 			return tmpl
