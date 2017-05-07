@@ -323,8 +323,9 @@ func (fsp *FileSystemProvider) LoadContent() error {
 		}
 
 		// We will keep it now, whatever it is.  For which we need its
-		// request-style path.
+		// request-style path, starting with a slash for consistency.
 		rpath := filepath.ToSlash(strings.TrimPrefix(path, config.ContentDir))
+		rpath = "/" + strings.TrimPrefix(rpath, "/")
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext == ".md" {
 			// Markdown page.
@@ -353,10 +354,20 @@ func (fsp *FileSystemProvider) LoadContent() error {
 			fsp.Add(p)
 
 		} else if ext == ".yml" || ext == ".yaml" {
+
 			// YAML page.
-			// TODO: parse it as a page, obviously.
+			b, err := ioutil.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
 			rpath = strings.TrimSuffix(rpath, ext)
-			fsp.Add(NewStandardFile(rpath, path))
+			p, err := StandardPageFromYAML(rpath, string(b))
+			if err != nil {
+				return err
+			}
+			fsp.Add(p)
+
 		} else {
 			// File to be served as-is.
 			fsp.Add(NewStandardFile(rpath, path))

@@ -23,6 +23,26 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// YAML-parsing helper types.
+// TODO: build a proper marshaler instead of this hack.
+type stdPageFromYAML struct {
+	Title   string
+	Tags    []string
+	Created time.Time
+	Updated time.Time
+	Meta    map[string]interface{}
+	Html    string
+}
+type stdContentFromYAML struct {
+	Type    string
+	Content string
+}
+type stdFromYAML struct {
+	Pages     map[string]*stdPageFromYAML
+	Content   map[string]*stdContentFromYAML
+	Templates map[string]string
+}
+
 // BasicPather is a minimal Pather.
 type BasicPather struct {
 	path string
@@ -202,6 +222,29 @@ func NewStandardPage(rpath, title string, tags []string,
 	}
 }
 
+// StandardPageFromYAML returns a page from YAML data in src, or the first
+// error encountered, with the assigned path.
+func StandardPageFromYAML(path, src string) (*StandardPage, error) {
+
+	target := stdPageFromYAML{}
+
+	if err := yaml.Unmarshal([]byte(src), &target); err != nil {
+		return nil, err
+	}
+
+	p := NewStandardPage(
+		path,
+		target.Title,
+		target.Tags,
+		target.Created,
+		target.Updated,
+		target.Meta,
+		target.Html,
+	)
+	return p, nil
+
+}
+
 // StandardPageFromData returns a pointer to a StandardPage with its
 // internal properties set according to the key-value pairs in the provided
 // data map m. All properties are optional except for path, and unknown
@@ -378,24 +421,7 @@ func NewStandardProvider() *StandardProvider {
 // with simple content.  It is NOT recommended complex scenarios.
 func StandardProviderFromYAML(src string) (*StandardProvider, error) {
 
-	type pageFromYAML struct {
-		Title   string
-		Tags    []string
-		Created time.Time
-		Updated time.Time
-		Meta    map[string]interface{}
-		Html    string
-	}
-	type contentFromYAML struct {
-		Type    string
-		Content string
-	}
-	type fromYAML struct {
-		Pages     map[string]*pageFromYAML
-		Content   map[string]*contentFromYAML
-		Templates map[string]string
-	}
-	target := fromYAML{}
+	target := stdFromYAML{}
 
 	if err := yaml.Unmarshal([]byte(src), &target); err != nil {
 		return nil, err

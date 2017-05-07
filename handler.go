@@ -143,6 +143,7 @@ func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
 		panic("Site.Provider must not be nil.")
 	}
 
+	log.Printf("shit %s %T", p.Path(), p)
 	switch item := p.(type) {
 	case Page:
 

@@ -5,6 +5,7 @@ package kisipar_test
 
 import (
 	// Standard:
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -688,6 +689,26 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 		"/foo/bother/boo/bam",
 	}
 	assert.Equal(exp, fsp.Paths(), "paths as expected")
+
+	// uh-oh, we had some trouble loading the right types, so...
+	ptypes := map[string]string{
+		"/dupe":                 "*kisipar.StandardPage",
+		"/foo":                  "*kisipar.StandardPage",
+		"/index":                "*kisipar.StandardPage",
+		"/other":                "*kisipar.StandardPage",
+		"/other.txt":            "*kisipar.StandardFile",
+		"/foo/bar":              "*kisipar.StandardPage",
+		"/foo/s.js":             "*kisipar.StandardFile",
+		"/foo/bar/baz":          "*kisipar.StandardPage",
+		"/foo/bother/data.json": "*kisipar.StandardFile",
+		"/foo/bother/boo/bam":   "*kisipar.StandardPage",
+	}
+	for path, pt := range ptypes {
+		p, err := fsp.Get(path)
+		if assert.Nil(err) {
+			assert.Equal(pt, fmt.Sprintf("%T", p), "%s is a %s", path, pt)
+		}
+	}
 }
 
 func Test_FileSystemProvider_LoadContent_Success_Exclude(t *testing.T) {
