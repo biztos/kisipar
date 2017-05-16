@@ -143,7 +143,6 @@ func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
 		panic("Site.Provider must not be nil.")
 	}
 
-	log.Printf("shit %s %T", p.Path(), p)
 	switch item := p.(type) {
 	case Page:
 
@@ -155,6 +154,7 @@ func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
 				Page:     item,
 			}
 			h.ServeTemplate(w, dot, tmpl, http.StatusOK)
+			return
 		}
 
 		// In normal operation you'd always have a template, because the
