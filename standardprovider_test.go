@@ -534,6 +534,10 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 	o := TestPatherStubber("older")
 	sp.Add(o)
 	ts := sp.Updated()
+
+	// Make sure the newer one really is newer (if only a bit).
+	time.Sleep(time.Nanosecond)
+
 	n := TestPatherStubber("newer")
 	sp.Add(n)
 
@@ -546,14 +550,14 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 	}
 
 	got, err = sp.GetSince("older", ts)
-	if assert.NotNil(err, "error for older item") {
+	if assert.Error(err, "error for older item") {
 		assert.Equal(kisipar.ErrNotModified, err, "standard error")
 	}
 
 	// The file, however, is special: it's the newest thing added, but its
 	// mod time is (by definition) older than the running of this test.
 	got, err = sp.GetSince("file", ts)
-	if assert.NotNil(err, "error for file") {
+	if assert.Error(err, "error for file") {
 		assert.Equal(kisipar.ErrNotModified, err, "standard error")
 	}
 
