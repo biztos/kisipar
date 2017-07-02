@@ -1,6 +1,6 @@
 // handler_test.go
 
-package kisipar_test
+package site_test
 
 import (
 	// Standard:
@@ -15,12 +15,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// Under test:
-	"github.com/biztos/kisipar"
+	"github.com/biztos/kisipar/provider"
+	"github.com/biztos/kisipar/site"
 )
 
 func Test_NewHandler_ErrorNoSite(t *testing.T) {
 
-	panicky := func() { kisipar.NewHandler(nil) }
+	panicky := func() { site.NewHandler(nil) }
 	testig.AssertPanicsWith(t, panicky, "Site must not be nil.",
 		"Nil Site caught")
 
@@ -28,7 +29,7 @@ func Test_NewHandler_ErrorNoSite(t *testing.T) {
 
 func Test_NewHandler_ErrorNoProvider(t *testing.T) {
 
-	panicky := func() { kisipar.NewHandler(&kisipar.Site{}) }
+	panicky := func() { site.NewHandler(&site.Site{}) }
 	testig.AssertPanicsWith(t, panicky, "Site.Provider must not be nil.",
 		"Nil Provider caught")
 
@@ -38,8 +39,8 @@ func Test_NewHandler_Success(t *testing.T) {
 
 	assert := assert.New(t)
 
-	s := &kisipar.Site{Provider: &kisipar.StandardProvider{}}
-	_, err := kisipar.NewHandler(s)
+	s := &site.Site{Provider: &provider.StandardProvider{}}
+	_, err := site.NewHandler(s)
 	if !assert.Nil(err, "no error") {
 		assert.FailNow(err.Error())
 	}
@@ -51,11 +52,11 @@ func Test_Handler_Error_Fallback(t *testing.T) {
 	assert := assert.New(t)
 
 	// We need a Site with a Provider that has no error templates.
-	s := &kisipar.Site{
-		Config:   &kisipar.Config{Port: 1000},
-		Provider: kisipar.NewStandardProvider(),
+	s := &site.Site{
+		Config:   &site.Config{Port: 1000},
+		Provider: provider.NewStandardProvider(),
 	}
-	h, err := kisipar.NewHandler(s)
+	h, err := site.NewHandler(s)
 	if !assert.Nil(err, "no error") {
 		assert.FailNow(err.Error())
 	}
@@ -91,16 +92,16 @@ templates:
         Path: {{ .Page.Path }}
         Error: {{ .Page.Title }}
         Detail: {{ .Page.HTML }}`
-	sp, err := kisipar.StandardProviderFromYAML(yaml)
+	sp, err := provider.StandardProviderFromYAML(yaml)
 	if err != nil {
 		assert.FailNow(err.Error())
 	}
 
-	s := &kisipar.Site{
-		Config:   &kisipar.Config{Port: 1000},
+	s := &site.Site{
+		Config:   &site.Config{Port: 1000},
 		Provider: sp,
 	}
-	h, err := kisipar.NewHandler(s)
+	h, err := site.NewHandler(s)
 	if !assert.Nil(err, "no error") {
 		assert.FailNow(err.Error())
 	}

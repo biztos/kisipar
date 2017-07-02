@@ -1,6 +1,6 @@
 // site.go -- A single Kisipar site.
 
-package kisipar
+package site
 
 import (
 	"errors"
@@ -10,12 +10,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	// Own stuff:
+	"github.com/biztos/kisipar/provider"
 )
 
 // Site represents a single Kisipar web site.
 type Site struct {
 	Config   *Config
-	Provider Provider
+	Provider provider.Provider
 	Server   *http.Server
 	Mux      *http.ServeMux
 	// TODO: logger?
@@ -72,11 +75,11 @@ func (s *Site) InitProvider() error {
 	case "":
 		return errors.New("Provider missing from Config.")
 	case "filesystem":
-		cfg, err := NewFileSystemProviderConfig(s.Config.ProviderConfig)
+		cfg, err := provider.NewFileSystemProviderConfig(s.Config.ProviderConfig)
 		if err != nil {
 			return fmt.Errorf("ProviderConfig error: %s", err)
 		}
-		fsp, err := LoadFileSystemProvider(cfg)
+		fsp, err := provider.LoadFileSystemProvider(cfg)
 		if err != nil {
 			return err
 		}

@@ -1,8 +1,7 @@
 // config.go - configuration for kisipar sites
 // ---------
-// (Largely TODO...)
 
-package kisipar
+package site
 
 import (
 	"errors"

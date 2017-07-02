@@ -2,4 +2,4 @@
 // -----------
 // Hmm, maybe nothing to test here if we're smart enough...
 
-package kisipar_test
+package site_test

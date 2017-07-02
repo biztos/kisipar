@@ -1,7 +1,7 @@
 // handlers.go -- kisipar http handler logic
 // -----------
 
-package kisipar
+package site
 
 import (
 	"bytes"
@@ -12,6 +12,9 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
+
+	// Own stuff:
+	"github.com/biztos/kisipar/provider"
 )
 
 // Handler is an http.Handler that responds to requests with content from a
@@ -104,7 +107,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if ts, err := http.ParseTime(ims); err == nil {
 				// We have a time, use it.
 				p, err := h.Site.Provider.GetSince(r.URL.Path, ts)
-				if err != nil && !IsNotExist(err) {
+				if err != nil && !provider.IsNotExist(err) {
 					// Uh-oh, data-provider error!
 					h.Error(w, r, http.StatusInternalServerError,
 						"Data provider error.", err.Error())
@@ -119,7 +122,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Final check: get it from the provider.
 	p, err := h.Site.Provider.Get(r.URL.Path)
 	if err != nil {
-		if IsNotExist(err) {
+		if provider.IsNotExist(err) {
 			h.Error(w, r, http.StatusNotFound, "Not Found", "")
 		} else {
 			// Data-provider error!
@@ -134,7 +137,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ServeItem serves a Pather which may be a Page, Content, File, Path,
 // PathHandler or Redirect.
-func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
+func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p provider.Pather) {
 
 	if h.Site == nil {
 		panic("Site must not be nil.")
@@ -144,7 +147,7 @@ func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
 	}
 
 	switch item := p.(type) {
-	case Page:
+	case provider.Page:
 
 		if tmpl := h.Site.Provider.TemplateFor(item); tmpl != nil {
 			dot := &Dot{
@@ -163,16 +166,16 @@ func (h *Handler) ServeItem(w http.ResponseWriter, r *http.Request, p Pather) {
 		// for the best.
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(item.HTML()))
-	case Content:
+	case provider.Content:
 		if ct := item.ContentType(); ct != "" {
 			w.Header().Set("Content-Type", ct)
 		}
 		http.ServeContent(w, r, item.Path(), item.ModTime(), item.ReadSeeker())
-	case File:
+	case provider.File:
 		http.ServeFile(w, r, item.FilePath())
-	case PathHandler:
+	case provider.PathHandler:
 		item.Func()(w, r)
-	case Redirect:
+	case provider.Redirect:
 		code := http.StatusFound
 		if item.Permanent() {
 			code = http.StatusMovedPermanently
@@ -202,7 +205,7 @@ func (h *Handler) Error(w http.ResponseWriter, r *http.Request, code int, msg, d
 	log.Printf("ERROR: %s %s %s %d %s: %s",
 		r.RemoteAddr, r.Method, r.URL, code, msg, detail)
 
-	p, _ := StandardPageFromData(
+	p, _ := provider.StandardPageFromData(
 		map[string]interface{}{
 			"path":    fmt.Sprintf("/errors/%d", code),
 			"title":   msg,
