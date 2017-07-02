@@ -1,6 +1,6 @@
 // standardprovider_test.go
 
-package kisipar_test
+package provider_test
 
 import (
 	// Standard:
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// Under test:
-	"github.com/biztos/kisipar"
+	"github.com/biztos/kisipar/provider"
 )
 
 // This is presumably the minimal Pather:
@@ -27,34 +27,34 @@ func (p TestPather) Path() string { return string(p) }
 // This is presumably as minimal a working Pather-Stubber as you can make:
 type TestPatherStubber string
 
-func (p TestPatherStubber) Path() string       { return string(p) }
-func (p TestPatherStubber) IsPageStub() bool   { return false }
-func (p TestPatherStubber) TypeString() string { return "TestPatherStubber" }
-func (p TestPatherStubber) Stub() kisipar.Stub { return p }
+func (p TestPatherStubber) Path() string        { return string(p) }
+func (p TestPatherStubber) IsPageStub() bool    { return false }
+func (p TestPatherStubber) TypeString() string  { return "TestPatherStubber" }
+func (p TestPatherStubber) Stub() provider.Stub { return p }
 
 func Test_InterfaceConformity(t *testing.T) {
 
 	// This will crash if anything doesn't match.
-	var f1 = func(ds kisipar.Provider) {
+	var f1 = func(ds provider.Provider) {
 		t.Log(ds)
 	}
-	f1(&kisipar.StandardProvider{})
+	f1(&provider.StandardProvider{})
 
 	// ...and so on...
-	var f2 = func(x kisipar.PageStub) {
+	var f2 = func(x provider.PageStub) {
 		t.Log(x)
 	}
-	f2(&kisipar.StandardPageStub{})
+	f2(&provider.StandardPageStub{})
 
 }
 
-func Test_BasicStub(t *testing.T) {
+func Test_StandardStub(t *testing.T) {
 
 	assert := assert.New(t)
 
-	bs := kisipar.NewBasicStub("/foo")
+	bs := provider.NewStandardStub("/foo")
 	assert.Equal("/foo", bs.Path(), "Path works")
-	assert.Equal("BasicStub", bs.TypeString(), "TypeString works")
+	assert.Equal("StandardStub", bs.TypeString(), "TypeString works")
 	assert.False(bs.IsPageStub(), "IsPageStub works")
 
 }
@@ -63,7 +63,7 @@ func Test_StandardPageStub(t *testing.T) {
 
 	assert := assert.New(t)
 
-	ps := &kisipar.StandardPageStub{}
+	ps := &provider.StandardPageStub{}
 	assert.Equal("StandardPageStub", ps.TypeString(), "TypeString works")
 	assert.True(ps.IsPageStub(), "IsPageStub works")
 	assert.True(ps.IsPageStub(), "IsPage works")
@@ -74,7 +74,7 @@ func Test_NewStandardContent(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sc := kisipar.NewStandardContent("/foo", "text/foo", "helo", time.Unix(1, 2))
+	sc := provider.NewStandardContent("/foo", "text/foo", "helo", time.Unix(1, 2))
 
 	assert.Equal("/foo", sc.Path(), "Path works")
 	assert.Equal("text/foo", sc.ContentType(), "ContentType works")
@@ -95,7 +95,7 @@ func Test_NewStandardContent_ModTimeDefault(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sc := kisipar.NewStandardContent("/foo", "text/foo", "helo", time.Time{})
+	sc := provider.NewStandardContent("/foo", "text/foo", "helo", time.Time{})
 
 	assert.WithinDuration(time.Now(), sc.ModTime(), time.Second,
 		"ModTime now for zero time")
@@ -106,9 +106,9 @@ func Test_IsNotExist(t *testing.T) {
 
 	assert := assert.New(t)
 
-	assert.True(kisipar.IsNotExist(kisipar.ErrNotExist), "local ErrNotExist")
-	assert.True(kisipar.IsNotExist(os.ErrNotExist), "os.ErrNotExist")
-	assert.False(kisipar.IsNotExist(errors.New("other")), "other error")
+	assert.True(provider.IsNotExist(provider.ErrNotExist), "local ErrNotExist")
+	assert.True(provider.IsNotExist(os.ErrNotExist), "os.ErrNotExist")
+	assert.False(provider.IsNotExist(errors.New("other")), "other error")
 
 }
 
@@ -116,7 +116,7 @@ func Test_NewStandardPage(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p := kisipar.NewStandardPage(
+	p := provider.NewStandardPage(
 		"/foo",                                  // path
 		"The Foo",                               // title
 		[]string{"boo", "hoo"},                  // tags
@@ -148,10 +148,10 @@ func Test_StandardPageFromData(t *testing.T) {
 		"created":        cr,
 		"updated":        up,
 		"meta":           map[string]interface{}{"foo": "bar"},
-		"something else": &kisipar.StandardPage{},
+		"something else": &provider.StandardPage{},
 	}
 
-	p, err := kisipar.StandardPageFromData(input)
+	p, err := provider.StandardPageFromData(input)
 	if assert.Nil(err, "no error") {
 		assert.Equal("Hello World", p.Title(), "Title")
 		assert.Equal([]string{"foo", "bar"}, p.Tags(), "Tags")
@@ -196,10 +196,10 @@ func Test_StandardPageFromData_TypeErrors(t *testing.T) {
 		// now override the one thing
 		in2[k] = NotMyType{}
 
-		_, err := kisipar.StandardPageFromData(in2)
+		_, err := provider.StandardPageFromData(in2)
 		if assert.Error(err) {
 
-			exp := fmt.Sprintf("Wrong type for %s: kisipar_test.NotMyType not %s",
+			exp := fmt.Sprintf("Wrong type for %s: provider_test.NotMyType not %s",
 				k, tStr[k])
 			assert.Equal(exp, err.Error(), "error as expected")
 		} else {
@@ -214,7 +214,7 @@ func Test_StandardPageFromData_EmptyPathError(t *testing.T) {
 	assert := assert.New(t)
 
 	input := map[string]interface{}{"path": ""}
-	_, err := kisipar.StandardPageFromData(input)
+	_, err := provider.StandardPageFromData(input)
 	if assert.Error(err) {
 		assert.Equal("path may not be an empty string", err.Error(),
 			"error as expected")
@@ -228,7 +228,7 @@ func Test_StandardPageFromData_MinimalData(t *testing.T) {
 
 	input := map[string]interface{}{"path": "/foo/bar"}
 
-	p, err := kisipar.StandardPageFromData(input)
+	p, err := provider.StandardPageFromData(input)
 	if assert.Nil(err, "no error") {
 		assert.Equal("/foo/bar", p.Path(), "Path")
 		assert.Zero("", p.Title(), "Title")
@@ -246,7 +246,7 @@ func Test_StandardPageFromData_EmptyData(t *testing.T) {
 
 	input := map[string]interface{}{}
 
-	_, err := kisipar.StandardPageFromData(input)
+	_, err := provider.StandardPageFromData(input)
 	if assert.Error(err, "error returned") {
 		assert.Equal("path not set", err.Error(), "error as expected")
 	}
@@ -257,7 +257,7 @@ func Test_StandardPage_MetaString(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p := kisipar.NewStandardPage(
+	p := provider.NewStandardPage(
 		"/foo",                 // path
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
@@ -284,7 +284,7 @@ func Test_StandardPage_MetaString(t *testing.T) {
 	assert.Equal(expTs, p.MetaString("ts"), "time -> string")
 
 	// nil source
-	p = &kisipar.StandardPage{}
+	p = &provider.StandardPage{}
 	assert.Equal("", p.MetaString("any"), "nil meta -> empty string")
 }
 
@@ -292,7 +292,7 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p := kisipar.NewStandardPage(
+	p := provider.NewStandardPage(
 		"/foo",                 // path
 		"The Foo",              // title
 		[]string{"boo", "hoo"}, // tags
@@ -325,7 +325,7 @@ func Test_StandardPage_MetaStrings(t *testing.T) {
 		p.MetaStrings("mixed"), "mixed slice")
 
 	// nil source
-	p = &kisipar.StandardPage{}
+	p = &provider.StandardPage{}
 	assert.Equal([]string{}, p.MetaStrings("any"),
 		"nil meta -> empty string slice")
 }
@@ -334,7 +334,7 @@ func Test_StandardPage_Stub(t *testing.T) {
 
 	assert := assert.New(t)
 
-	src := kisipar.NewStandardPage(
+	src := provider.NewStandardPage(
 		"/foo",                                  // path
 		"The Foo",                               // title
 		[]string{"boo", "hoo"},                  // tags
@@ -348,10 +348,8 @@ func Test_StandardPage_Stub(t *testing.T) {
 	// directly: Go thinks this is a plain Stub but it's actually a PageStub;
 	// we have to cast it as such before we can access its other methods.
 	s := src.Stub()
-	p, _ := s.(kisipar.PageStub)
-
-	// The stub is identical to the page but also has stubby stuff.
-	if !assert.True(s.IsPageStub(), "it's a page stub") {
+	p, ok := s.(provider.PageStub)
+	if !assert.True(ok, "it's a page stub") {
 		t.Fatal(fmt.Sprintf("%T", s))
 	}
 
@@ -367,7 +365,7 @@ func Test_StandardPage_FlexMetaString(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p := kisipar.NewStandardPage(
+	p := provider.NewStandardPage(
 		"/foo",                                  // path
 		"The Foo",                               // title
 		[]string{"boo", "hoo"},                  // tags
@@ -384,7 +382,7 @@ func Test_NewStandardProvider(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 
 	assert.Regexp("<StandardProvider with 0 items, updated .*>",
 		sp.String(), "Stringifies as expected")
@@ -397,7 +395,7 @@ func Test_StandardProviderFromYAML_YAMLError(t *testing.T) {
 	yaml := `# I am (not really proper) YAML!
 foo: {-- ,]`
 
-	_, err := kisipar.StandardProviderFromYAML(yaml)
+	_, err := provider.StandardProviderFromYAML(yaml)
 	if assert.Error(err) {
 		assert.Regexp("yaml", err, "Error is useful")
 	}
@@ -416,7 +414,7 @@ templates:
         {{ foreach .Nope }}
 `
 
-	_, err := kisipar.StandardProviderFromYAML(yaml)
+	_, err := provider.StandardProviderFromYAML(yaml)
 	if assert.Error(err) {
 		assert.Regexp("template", err, "Error is useful")
 	}
@@ -452,7 +450,7 @@ templates:
         <h1>Hello {{ .Title }}</h1>
 `
 
-	sp, err := kisipar.StandardProviderFromYAML(yaml)
+	sp, err := provider.StandardProviderFromYAML(yaml)
 	if assert.Nil(err, "no error") {
 
 		assert.Regexp("<StandardProvider with 3 items, updated .*>",
@@ -460,15 +458,15 @@ templates:
 		return
 		foo, err := sp.Get("/foo/bar")
 		if assert.Nil(err, "no err getting first item") {
-			assert.Implements((*kisipar.Page)(nil), foo, "it's a Page")
+			assert.Implements((*provider.Page)(nil), foo, "it's a Page")
 		}
 		bat, err := sp.Get("/baz/bat")
 		if assert.Nil(err, "no err getting second item") {
-			assert.Implements((*kisipar.Page)(nil), bat, "it's a Page")
+			assert.Implements((*provider.Page)(nil), bat, "it's a Page")
 		}
 		goob, err := sp.Get("/js/goober.js")
 		if assert.Nil(err, "no err getting third item") {
-			assert.Implements((*kisipar.Content)(nil), goob, "it's a Content")
+			assert.Implements((*provider.Content)(nil), goob, "it's a Content")
 		}
 
 		tmpl := sp.Template()
@@ -481,7 +479,7 @@ func Test_StandardProvider_Add(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 
 	assert.Equal(0, sp.Count(), "zero items")
 	u := sp.Updated()
@@ -495,7 +493,7 @@ func Test_StandardProvider_Get(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	p := TestPatherStubber("dummy")
 	sp.Add(p)
 
@@ -506,9 +504,8 @@ func Test_StandardProvider_Get(t *testing.T) {
 
 	got, err = sp.Get("not dummy")
 	if assert.NotNil(err, "error for missing item") {
-		assert.Equal(kisipar.ErrNotExist, err, "standard error")
 		// And obviously:
-		assert.True(kisipar.IsNotExist(err), "IsNotExist true for error")
+		assert.True(provider.IsNotExist(err), "IsNotExist true for error")
 	}
 
 }
@@ -517,11 +514,10 @@ func Test_StandardProvider_GetSince_ErrNotExist(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	_, err := sp.GetSince("nada", time.Now())
 	if assert.Error(err) {
-		assert.Equal(kisipar.ErrNotExist, err, "ErrNotExist returned")
-		assert.True(kisipar.IsNotExist(err), "IsNotExist satisfied")
+		assert.True(provider.IsNotExist(err), "IsNotExist satisfied")
 	}
 
 }
@@ -530,7 +526,7 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	o := TestPatherStubber("older")
 	sp.Add(o)
 	ts := sp.Updated()
@@ -541,7 +537,7 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 	n := TestPatherStubber("newer")
 	sp.Add(n)
 
-	f := kisipar.NewStandardFile("file", "standardprovider_test.go")
+	f := provider.NewStandardFile("file", "standardprovider_test.go")
 	sp.Add(f)
 
 	got, err := sp.GetSince("newer", ts)
@@ -551,14 +547,14 @@ func Test_StandardProvider_GetSince(t *testing.T) {
 
 	got, err = sp.GetSince("older", ts)
 	if assert.Error(err, "error for older item") {
-		assert.Equal(kisipar.ErrNotModified, err, "standard error")
+		assert.Equal(304, err.Code(), "standard error")
 	}
 
 	// The file, however, is special: it's the newest thing added, but its
 	// mod time is (by definition) older than the running of this test.
 	got, err = sp.GetSince("file", ts)
 	if assert.Error(err, "error for file") {
-		assert.Equal(kisipar.ErrNotModified, err, "standard error")
+		assert.Equal(304, err.Code(), "standard error")
 	}
 
 }
@@ -567,11 +563,10 @@ func Test_StandardProvider_GetStub_ErrNotExist(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	_, err := sp.GetStub("nada")
 	if assert.Error(err) {
-		assert.Equal(kisipar.ErrNotExist, err, "ErrNotExist returned")
-		assert.True(kisipar.IsNotExist(err), "IsNotExist satisfied")
+		assert.True(provider.IsNotExist(err), "IsNotExist satisfied")
 	}
 
 }
@@ -580,12 +575,12 @@ func Test_StandardProvider_GetStub_ErrNotStubber(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	p := TestPather("stubless")
 	sp.Add(p)
 	_, err := sp.GetStub("stubless")
 	if assert.Error(err) {
-		assert.Equal(kisipar.ErrNotStubber, err, "ErrNotStubber returned")
+		assert.Equal(404, err.Code(), "not-found error returned")
 	}
 
 }
@@ -594,7 +589,7 @@ func Test_StandardProvider_GetStub(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	p := TestPatherStubber("dummy")
 	sp.Add(p)
 
@@ -609,7 +604,7 @@ func Test_StandardProvider_GetPageStubs(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p1 := kisipar.NewStandardPage(
+	p1 := provider.NewStandardPage(
 		"/foo/p1",                               // path
 		"The Foo 1",                             // title
 		[]string{"boo", "hoo"},                  // tags
@@ -618,7 +613,7 @@ func Test_StandardProvider_GetPageStubs(t *testing.T) {
 		map[string]interface{}{"helo": "WORLD"}, // meta
 		"<h1>foo</h1>",                          // html
 	)
-	p2 := kisipar.NewStandardPage(
+	p2 := provider.NewStandardPage(
 		"/foo/p2",                               // path
 		"The Foo 2",                             // title
 		[]string{"boo", "hoo"},                  // tags
@@ -628,7 +623,7 @@ func Test_StandardProvider_GetPageStubs(t *testing.T) {
 		"<h1>foo</h1>",                          // html
 	)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	sp.Add(TestPatherStubber("/foo"))
 	sp.Add(TestPatherStubber("/foodie"))
 	sp.Add(TestPather("/foo/bar/baz")) // not stubber...
@@ -650,7 +645,7 @@ func Test_StandardProvider_GetStubs(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	sp.Add(TestPatherStubber("/foo"))
 	sp.Add(TestPatherStubber("/foodie"))
 	sp.Add(TestPather("/foo/bar/baz")) // not stubber...
@@ -671,7 +666,7 @@ func Test_StandardProvider_GetAll(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sp := kisipar.NewStandardProvider()
+	sp := provider.NewStandardProvider()
 	sp.Add(TestPatherStubber("/foo"))
 	sp.Add(TestPatherStubber("/foodie"))
 	sp.Add(TestPather("/foo/bar/baz")) // not stubber...
@@ -702,7 +697,7 @@ templates:
         HERE
 `
 
-	sp, err := kisipar.StandardProviderFromYAML(yaml)
+	sp, err := provider.StandardProviderFromYAML(yaml)
 	if err != nil {
 		panic(err)
 	}
@@ -710,7 +705,7 @@ templates:
 	if err != nil {
 		panic(err)
 	}
-	page, ok := p.(*kisipar.StandardPage)
+	page, ok := p.(*provider.StandardPage)
 	if !ok {
 		panic(p)
 	}

@@ -1,7 +1,7 @@
 // filesystemprovider.go -- File System Based Provider for Kisipar.
 // ---------------------
 
-package kisipar
+package provider
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 
 	// Own stuff:
 	"github.com/biztos/frostedmd"
+	"github.com/biztos/kisipar/bindata"
 )
 
 // FileSystemProviderConfig defines the configuration options for a
@@ -228,7 +229,7 @@ func (fsp *FileSystemProvider) LoadInternalTemplates() error {
 	// with the built-in templates.
 	prefix := "templates/" + theme + "/"
 	paths := []string{}
-	for _, name := range AssetNames() {
+	for _, name := range bindata.AssetNames() {
 		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".html") {
 			paths = append(paths, name)
 		}
@@ -243,7 +244,7 @@ func (fsp *FileSystemProvider) LoadInternalTemplates() error {
 	tmpl := template.Must(template.New("").Funcs(FuncMap()).Parse(""))
 	for _, path := range paths {
 
-		b := MustAsset(path)
+		b := bindata.MustAsset(path)
 		path = strings.TrimPrefix(path, prefix)
 		template.Must(tmpl.New(path).Parse(string(b)))
 

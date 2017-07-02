@@ -1,4 +1,4 @@
-// standardprovider.go -- the StandardProvider type and frienp.
+// standardprovider.go -- the StandardProvider type and friends.
 // -------------------
 // TODO: MetaAsset or something like that, so you can have a set of pics
 // with titles and metas.  I want that for slideshows anyway, and they
@@ -6,7 +6,7 @@
 // ** StandardAsset? **
 // ALSO: some concept of sort order for them, maybe?
 
-package kisipar
+package provider
 
 import (
 	// Standard Library:
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -43,36 +44,36 @@ type stdFromYAML struct {
 	Templates map[string]string
 }
 
-// BasicPather is a minimal Pather.
-type BasicPather struct {
+// StandardPather is a minimal Pather.
+type StandardPather struct {
 	path string
 }
 
-// Path returns the path of the BasicPather.
-func (p *BasicPather) Path() string { return p.path }
+// Path returns the path of the StandardPather.
+func (p *StandardPather) Path() string { return p.path }
 
-// NewBasicPather returns a BasicPather with path p.
-func NewBasicPather(p string) *BasicPather {
-	return &BasicPather{p}
+// NewStandardPather returns a StandardPather with path p.
+func NewStandardPather(p string) *StandardPather {
+	return &StandardPather{p}
 }
 
-// BasicStub is a minimal immutable non-Page Stub.
-type BasicStub struct {
+// StandardStub is a minimal immutable non-Page Stub.
+type StandardStub struct {
 	path string
 }
 
 // Path returns the request path of the stub.
-func (s *BasicStub) Path() string { return s.path }
+func (s *StandardStub) Path() string { return s.path }
 
-// TypeString returns the stringified type of the stub: "BasicStub"
-func (s *BasicStub) TypeString() string { return "BasicStub" }
+// TypeString returns the stringified type of the stub: "StandardStub"
+func (s *StandardStub) TypeString() string { return "StandardStub" }
 
-// IsPageStub returns false for the BasicStub; use the StandardPageStub for
+// IsPageStub returns false for the StandardStub; use the StandardPageStub for
 // a simple page-based stub.
-func (s *BasicStub) IsPageStub() bool { return false }
+func (s *StandardStub) IsPageStub() bool { return false }
 
-// NewBasicStub returns a pointer to a BasicStub with the given path.
-func NewBasicStub(rpath string) *BasicStub { return &BasicStub{rpath} }
+// NewStandardStub returns a pointer to a StandardStub with the given path.
+func NewStandardStub(rpath string) *StandardStub { return &StandardStub{rpath} }
 
 // StandardPageStub is a stub based on a StandardPage.
 type StandardPageStub struct {
@@ -353,6 +354,85 @@ func NewStandardFile(rpath, fpath string) *StandardFile {
 	}
 }
 
+// StandardPathError is a minimal PathError implementation and may be used
+// (usually via NewStandardPathError) for error responses from fetch methods
+// such as Get.
+type StandardPathError struct {
+	path          string
+	code          int
+	message       string
+	publicDetail  string
+	privateDetail string
+}
+
+// Path returns the path of the StandardPathError in the Provider.
+func (p *StandardPathError) Path() string { return p.path }
+
+// Code returns the HTTP error code of the StandardPathError.
+func (p *StandardPathError) Code() int { return p.code }
+
+// Message returns the HTTP status message of the StandardPathError.
+func (p *StandardPathError) Message() string { return p.message }
+
+// PublicDetail returns the public-facing detail message of the
+// StandardPathError.
+func (p *StandardPathError) PublicDetail() string { return p.publicDetail }
+
+// PrivateDetail returns the private, loggable detail message of the
+// StandardPathError.
+func (p *StandardPathError) PrivateDetail() string { return p.privateDetail }
+
+// Error returns a stringified version of the StandardPathError suitable for
+// non-http error handling.  Note that this does NOT include the PrivateDetail
+// for the error.
+func (p *StandardPathError) Error() string {
+	return fmt.Sprintf("%d %s: %s (%s)", p.code, p.message, p.publicDetail, p.path)
+}
+
+// NewStandardPathError returns a PathError with the given path and code,
+// and the positional messages:
+//   Message (defaults to the standard message for the code)
+//   PublicDetail
+//   PrivateDetail
+// It is normal to call NewStandardPathError with no msgStrings.  If more than
+// one string is sent as a PrivateDetail then they are assumed to be sprintf-
+// style (fmt,args) arguments.
+func NewStandardPathError(path string, code int, msgStrings ...string) *StandardPathError {
+
+	msg := ""
+	public := ""
+	private := ""
+	if len(msgStrings) > 0 {
+		msg = msgStrings[0]
+	}
+	if len(msgStrings) > 1 {
+		public = msgStrings[1]
+	}
+	if len(msgStrings) > 2 {
+		private = msgStrings[2]
+	}
+	if len(msgStrings) > 3 {
+		f := msgStrings[2]
+		sargs := msgStrings[3:]
+		fargs := make([]interface{}, len(sargs))
+		for idx, s := range sargs {
+			fargs[idx] = interface{}(s)
+		}
+		private = fmt.Sprintf(f, fargs...)
+	}
+
+	if msg == "" {
+		msg = http.StatusText(code)
+	}
+	return &StandardPathError{
+		path:          path,
+		code:          code,
+		message:       msg,
+		publicDetail:  public,
+		privateDetail: private,
+	}
+}
+
 // StandardProvider is a mostly-opaque Provider that exists entirely in
 // memory.
 //
@@ -502,14 +582,14 @@ func (sp *StandardProvider) Add(p Pather) {
 }
 
 // Get returns an item from the Provider if available; an error if not.
-func (sp *StandardProvider) Get(rpath string) (Pather, error) {
+func (sp *StandardProvider) Get(rpath string) (Pather, PathError) {
 
 	sp.mutex.RLock()
 	item := sp.items[rpath]
 	sp.mutex.RUnlock()
 
 	if item == nil {
-		return nil, ErrNotExist
+		return nil, NewStandardPathError(rpath, http.StatusNotFound)
 	}
 	return item, nil
 
@@ -519,7 +599,7 @@ func (sp *StandardProvider) Get(rpath string) (Pather, error) {
 // than the since time; or an error if not. The caller should in particular
 // watch for the ErrNotModified error, which usually indicates a 304 Not
 // Modified response should be sent to the client.
-func (sp *StandardProvider) GetSince(rpath string, since time.Time) (Pather, error) {
+func (sp *StandardProvider) GetSince(rpath string, since time.Time) (Pather, PathError) {
 
 	sp.mutex.RLock()
 	item := sp.items[rpath]
@@ -527,17 +607,22 @@ func (sp *StandardProvider) GetSince(rpath string, since time.Time) (Pather, err
 	sp.mutex.RUnlock()
 
 	if item == nil {
-		return nil, ErrNotExist
+		return nil, NewStandardPathError(rpath, http.StatusNotFound)
 	}
 	if modtime.After(since) {
 		return item, nil
 	}
-	return nil, ErrNotModified
+	return nil, NewStandardPathError(rpath, http.StatusNotModified)
 }
 
 // GetStub returns a Stub item if available and implements the Stubber
-// interface; an error if not.
-func (sp *StandardProvider) GetStub(rpath string) (Stub, error) {
+// interface; an error if not.  An item that is not a Stubber is treated
+// as not-found.
+//
+// The expected use-case for this is providing a preview of a large object,
+// e.g. an image thumbnail with metadata, though a specialized Stub
+// implementation.
+func (sp *StandardProvider) GetStub(rpath string) (Stub, PathError) {
 	sp.mutex.RLock()
 	item, err := sp.Get(rpath)
 	sp.mutex.RUnlock()
@@ -548,7 +633,7 @@ func (sp *StandardProvider) GetStub(rpath string) (Stub, error) {
 	if s, ok := item.(Stubber); ok {
 		return s.Stub(), nil
 	}
-	return nil, ErrNotStubber
+	return nil, NewStandardPathError(rpath, http.StatusNotFound)
 
 }
 
@@ -570,6 +655,24 @@ func (sp *StandardProvider) PathsUnder(prefix string) []string {
 
 }
 
+// GetPages returns a slice of all Pages with paths "under" the given prefix,
+// following the same logic as GetAll.
+func (sp *StandardProvider) GetPages(prefix string) []Page {
+
+	paths := sp.PathsUnder(prefix)
+	pages := []Page{}
+	sp.mutex.RLock()
+	for _, path := range paths {
+		if item, _ := sp.Get(path); item != nil {
+			if p, ok := item.(Page); ok {
+				pages = append(pages, p)
+			}
+		}
+	}
+	sp.mutex.RUnlock()
+	return pages
+}
+
 // GetPageStubs returns a slice of all PageStubs "under" the given prefix,
 // following the logic described in GetStubs.
 //
@@ -577,27 +680,26 @@ func (sp *StandardProvider) PathsUnder(prefix string) []string {
 // directory.
 func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
 	paths := sp.PathsUnder(prefix)
-	sp.mutex.RLock()
 	pagestubs := []PageStub{}
+	sp.mutex.RLock()
 	for _, path := range paths {
 		if s, _ := sp.GetStub(path); s != nil {
-			// Only "real" page-backed PageStubs.
-			if s.IsPageStub() {
-				if ps, ok := s.(PageStub); ok {
-					pagestubs = append(pagestubs, ps)
-				}
+			if p, ok := s.(PageStub); ok {
+				pagestubs = append(pagestubs, p)
 			}
 		}
 	}
 	sp.mutex.RUnlock()
-
 	return pagestubs
+
 }
 
 // GetStubs returns a slice of Stub items for everything "under" the given
-// prefix, i.e. everything with a path beginning with that prefix. It is
-// usually wise to terminate the prefix with a slash, but this is up to the
-// template author.  If the prefix is the empty string then all available
+// prefix, i.e. everything with a path beginning with that prefix, that
+// implement the Stubber interface.
+//
+// It is usually wise to terminate the prefix with a slash, but this is up to
+// the template author.  If the prefix is the empty string then all available
 // Stubs will be returned.
 //
 // If nothing exists under the prefix, and empty slice is returned.  Thus
@@ -605,12 +707,6 @@ func (sp *StandardProvider) GetPageStubs(prefix string) []PageStub {
 //
 // Items are returned in string-sorted order by path.  Any item that does not
 // implement the Stubber interface is ignored.
-//
-// TODO: new type for []Stub, an interface, something that can deal with
-// iterators and so on.
-// TODO: build out the use-case for this, basically it's for stuff like
-// lists of images where the template knows the type but the system doesn't.
-// TODO: make the stub array first, return the used portion as a slice.
 func (sp *StandardProvider) GetStubs(prefix string) []Stub {
 
 	paths := sp.PathsUnder(prefix)

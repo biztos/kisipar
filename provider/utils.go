@@ -1,8 +1,8 @@
-// utils.go -- general-purpose utilities useful in Kisipar.
+// utils.go -- kisipar Provider utility functions and types.
 // --------
 // NOTE: these may wander off into the "utli" package at some point.
 
-package kisipar
+package provider
 
 import (
 	"fmt"

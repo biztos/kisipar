@@ -1,7 +1,7 @@
 // filesystemprovider_test.go -- tests for filesystem provider
 // --------------------------
 
-package kisipar_test
+package provider_test
 
 import (
 	// Standard:
@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	// Under test:
-	"github.com/biztos/kisipar"
+	"github.com/biztos/kisipar/provider"
 )
 
 func Test_NewFileSystemProviderConfig_UnknownKey(t *testing.T) {
@@ -24,7 +24,7 @@ func Test_NewFileSystemProviderConfig_UnknownKey(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"fremd": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("Unexpected FileSystemProviderConfig key: fremd",
 			err.Error(), "error useful")
@@ -37,7 +37,7 @@ func Test_NewFileSystemProviderConfig_ContentDirNotString(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"ContentDir": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("ContentDir must be a string, not bool.",
 			err.Error(), "error useful")
@@ -50,7 +50,7 @@ func Test_NewFileSystemProviderConfig_TemplateDirNotString(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"TemplateDir": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("TemplateDir must be a string, not bool.",
 			err.Error(), "error useful")
@@ -63,7 +63,7 @@ func Test_NewFileSystemProviderConfig_TemplateThemeNotString(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"TemplateTheme": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("TemplateTheme must be a string, not bool.",
 			err.Error(), "error useful")
@@ -76,7 +76,7 @@ func Test_NewFileSystemProviderConfig_ExcludeWrongType(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"Exclude": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("Exclude is neither a *regexp.Regexp nor a string, but a bool.",
 			err.Error(), "error useful")
@@ -89,7 +89,7 @@ func Test_NewFileSystemProviderConfig_ExcludeBadRegex(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"Exclude": "^foo[a"}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Regexp("^Exclude is not a valid regexp string",
 			err.Error(), "error useful")
@@ -102,7 +102,7 @@ func Test_NewFileSystemProviderConfig_IncludeWrongType(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"Include": true}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("Include is neither a *regexp.Regexp nor a string, but a bool.",
 			err.Error(), "error useful")
@@ -115,7 +115,7 @@ func Test_NewFileSystemProviderConfig_IncludeBadRegex(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"Include": "^foo[a"}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Regexp("^Include is not a valid regexp string",
 			err.Error(), "error useful")
@@ -128,7 +128,7 @@ func Test_NewFileSystemProviderConfig_AllowMetaErrorsNotBool(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"AllowMetaErrors": 123}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("AllowMetaErrors must be a bool, not int.",
 			err.Error(), "error useful")
@@ -141,7 +141,7 @@ func Test_NewFileSystemProviderConfig_AutoRefreshNotBool(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{"AutoRefresh": 123}
-	_, err := kisipar.NewFileSystemProviderConfig(d)
+	_, err := provider.NewFileSystemProviderConfig(d)
 	if assert.Error(err) {
 		assert.Equal("AutoRefresh must be a bool, not int.",
 			err.Error(), "error useful")
@@ -154,12 +154,12 @@ func Test_NewFileSystemProviderConfig_SuccessWithEmpty(t *testing.T) {
 	assert := assert.New(t)
 
 	d := map[string]interface{}{}
-	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	cfg, err := provider.NewFileSystemProviderConfig(d)
 	if !assert.Nil(err) {
 		assert.FailNow(err.Error())
 	}
 
-	exp := &kisipar.FileSystemProviderConfig{}
+	exp := &provider.FileSystemProviderConfig{}
 	assert.Equal(exp, cfg, "got empty config")
 
 }
@@ -177,12 +177,12 @@ func Test_NewFileSystemProviderConfig_SuccessWithZeroValues(t *testing.T) {
 		"AllowMetaErrors": false,
 		"AutoRefresh":     false,
 	}
-	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	cfg, err := provider.NewFileSystemProviderConfig(d)
 	if !assert.Nil(err) {
 		assert.FailNow(err.Error())
 	}
 
-	exp := &kisipar.FileSystemProviderConfig{}
+	exp := &provider.FileSystemProviderConfig{}
 	assert.Equal(exp, cfg, "got empty config")
 
 }
@@ -200,12 +200,12 @@ func Test_NewFileSystemProviderConfig_SuccessWithNonzeroValues(t *testing.T) {
 		"AllowMetaErrors": true,
 		"AutoRefresh":     true,
 	}
-	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	cfg, err := provider.NewFileSystemProviderConfig(d)
 	if !assert.Nil(err) {
 		assert.FailNow(err.Error())
 	}
 
-	exp := &kisipar.FileSystemProviderConfig{
+	exp := &provider.FileSystemProviderConfig{
 		ContentDir:      "cdir/",
 		TemplateDir:     "tdir/",
 		TemplateTheme:   "happy",
@@ -226,12 +226,12 @@ func Test_NewFileSystemProviderConfig_SuccessWithStringRegexps(t *testing.T) {
 		"Exclude": "ex",
 		"Include": "in",
 	}
-	cfg, err := kisipar.NewFileSystemProviderConfig(d)
+	cfg, err := provider.NewFileSystemProviderConfig(d)
 	if !assert.Nil(err) {
 		assert.FailNow(err.Error())
 	}
 
-	exp := &kisipar.FileSystemProviderConfig{
+	exp := &provider.FileSystemProviderConfig{
 		Exclude: regexp.MustCompile("ex"),
 		Include: regexp.MustCompile("in"),
 	}
@@ -243,7 +243,7 @@ func Test_NewFileSystemProvider(t *testing.T) {
 
 	assert := assert.New(t)
 
-	fsp := kisipar.NewFileSystemProvider(&kisipar.FileSystemProviderConfig{
+	fsp := provider.NewFileSystemProvider(&provider.FileSystemProviderConfig{
 		ContentDir: "/any/where",
 	})
 
@@ -258,9 +258,9 @@ func Test_FileSystemProvider_LoadTemplates_NoTemplateDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{}
+	config := &provider.FileSystemProviderConfig{}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadTemplates()
 	assert.Nil(err, "no error")
@@ -272,9 +272,9 @@ func Test_FileSystemProvider_LoadTemplates_NoSuchDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: "nosuchdir"}
+	config := &provider.FileSystemProviderConfig{TemplateDir: "nosuchdir"}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadTemplates()
 	if assert.Error(err, "got error") {
@@ -286,9 +286,9 @@ func Test_FileSystemProvider_LoadTemplates_DirNotDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: "README.md"}
+	config := &provider.FileSystemProviderConfig{TemplateDir: "README.md"}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadTemplates()
 	if assert.Error(err, "got error") {
@@ -301,9 +301,9 @@ func Test_FileSystemProvider_LoadTemplates_TemplateError(t *testing.T) {
 	assert := assert.New(t)
 
 	dir := filepath.Join("testdata", "fsp-bad-templates")
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: dir}
+	config := &provider.FileSystemProviderConfig{TemplateDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadTemplates()
 	if assert.Error(err, "got error") {
@@ -340,9 +340,9 @@ func Test_FileSystemProvider_LoadTemplates_InnerSymlinkError(t *testing.T) {
 	os.Remove(fn)
 
 	// And we should get an error loading the templates:
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: dir}
+	config := &provider.FileSystemProviderConfig{TemplateDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadTemplates()
 	if assert.Error(err, "got error") {
@@ -375,9 +375,9 @@ func Test_FileSystemProvider_LoadTemplates_InnerSymlinkIsDir(t *testing.T) {
 	}
 
 	// And we should get no error, but exercise the symlink dir skip logic:
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: dir}
+	config := &provider.FileSystemProviderConfig{TemplateDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadTemplates()
 	if !assert.Nil(err, "no error") {
@@ -404,9 +404,9 @@ func Test_FileSystemProvider_LoadTemplates_FileReadError(t *testing.T) {
 	}
 
 	// And we should get a file read error walking the dir:
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: dir}
+	config := &provider.FileSystemProviderConfig{TemplateDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadTemplates()
 	if assert.Error(err, "got error") {
@@ -420,9 +420,9 @@ func Test_FileSystemProvider_LoadTemplates_Success(t *testing.T) {
 	assert := assert.New(t)
 
 	dir := filepath.Join("testdata", "fsp-templates")
-	config := &kisipar.FileSystemProviderConfig{TemplateDir: dir}
+	config := &provider.FileSystemProviderConfig{TemplateDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadTemplates()
 	if !assert.Nil(err, "no error") {
@@ -435,8 +435,8 @@ func Test_FileSystemProvider_LoadInternalTemplates_ThemeError(t *testing.T) {
 	assert := assert.New(t)
 
 	// Do all of them.
-	config := &kisipar.FileSystemProviderConfig{TemplateTheme: "nonesuch"}
-	fsp := kisipar.NewFileSystemProvider(config)
+	config := &provider.FileSystemProviderConfig{TemplateTheme: "nonesuch"}
+	fsp := provider.NewFileSystemProvider(config)
 	err := fsp.LoadInternalTemplates()
 	if assert.Error(err) {
 		assert.Equal("No templates available for theme nonesuch.", err.Error(),
@@ -450,13 +450,13 @@ func Test_FileSystemProvider_LoadInternalTemplates_Success(t *testing.T) {
 	assert := assert.New(t)
 
 	// Do all of them.
-	themes := kisipar.TemplateThemes()
+	themes := provider.TemplateThemes()
 	if len(themes) < 1 {
 		panic("no themes from TemplateThemes")
 	}
 	for _, theme := range themes {
-		config := &kisipar.FileSystemProviderConfig{TemplateTheme: theme}
-		fsp := kisipar.NewFileSystemProvider(config)
+		config := &provider.FileSystemProviderConfig{TemplateTheme: theme}
+		fsp := provider.NewFileSystemProvider(config)
 		err := fsp.LoadInternalTemplates()
 		if !assert.Nil(err, "no error") {
 			t.Log(err)
@@ -469,8 +469,8 @@ func Test_FileSystemProvider_LoadInternalTemplates_SuccessDefault(t *testing.T) 
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{}
-	fsp := kisipar.NewFileSystemProvider(config)
+	config := &provider.FileSystemProviderConfig{}
+	fsp := provider.NewFileSystemProvider(config)
 	err := fsp.LoadInternalTemplates()
 	if !assert.Nil(err, "no error") {
 		t.Log(err)
@@ -482,9 +482,9 @@ func Test_FileSystemProvider_LoadContent_NoContentDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{ContentDir: ""}
+	config := &provider.FileSystemProviderConfig{ContentDir: ""}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	if !assert.Nil(err, "no error") {
@@ -496,9 +496,9 @@ func Test_FileSystemProvider_LoadContent_NoSuchDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{ContentDir: "nosuchdir"}
+	config := &provider.FileSystemProviderConfig{ContentDir: "nosuchdir"}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	if assert.Error(err, "got error") {
@@ -510,9 +510,9 @@ func Test_FileSystemProvider_LoadContent_DirNotDir(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{ContentDir: "README.md"}
+	config := &provider.FileSystemProviderConfig{ContentDir: "README.md"}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	if assert.Error(err, "got error") {
@@ -548,9 +548,9 @@ func Test_FileSystemProvider_LoadContent_InnerSymlinkError(t *testing.T) {
 	os.Remove(fn)
 
 	// And we should get an error loading the content:
-	config := &kisipar.FileSystemProviderConfig{ContentDir: dir}
+	config := &provider.FileSystemProviderConfig{ContentDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadContent()
 	if assert.Error(err, "got error") {
@@ -583,9 +583,9 @@ func Test_FileSystemProvider_LoadContent_InnerSymlinkIsDir(t *testing.T) {
 	}
 
 	// And we should get no error, but exercise the symlink dir skip logic:
-	config := &kisipar.FileSystemProviderConfig{ContentDir: dir}
+	config := &provider.FileSystemProviderConfig{ContentDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadContent()
 	if !assert.Nil(err, "no error") {
@@ -612,9 +612,9 @@ func Test_FileSystemProvider_LoadContent_FileReadError(t *testing.T) {
 	}
 
 	// And we should get a file read error walking the dir:
-	config := &kisipar.FileSystemProviderConfig{ContentDir: dir}
+	config := &provider.FileSystemProviderConfig{ContentDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err = fsp.LoadContent()
 	if assert.Error(err, "got error") {
@@ -630,9 +630,9 @@ func Test_FileSystemProvider_LoadContent_PageMetaError(t *testing.T) {
 	dir := filepath.Join("testdata", "fsp-bad-content")
 
 	// When Strict is set, we get an error:
-	config := &kisipar.FileSystemProviderConfig{ContentDir: dir}
+	config := &provider.FileSystemProviderConfig{ContentDir: dir}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	if assert.Error(err, "got error") {
@@ -645,12 +645,12 @@ func Test_LoadFileSystemProvider_PageMetaError_AllowMetaErrors(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir:      filepath.Join("testdata", "fsp-bad-content"),
 		AllowMetaErrors: true,
 	}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	if !assert.Nil(err, "no error") {
@@ -667,11 +667,11 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir: filepath.Join("testdata", "fsp-content"),
 	}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	assert.Nil(err, "no error")
@@ -692,16 +692,16 @@ func Test_FileSystemProvider_LoadContent_Success(t *testing.T) {
 
 	// uh-oh, we had some trouble loading the right types, so...
 	ptypes := map[string]string{
-		"/dupe":                 "*kisipar.StandardPage",
-		"/foo":                  "*kisipar.StandardPage",
-		"/index":                "*kisipar.StandardPage",
-		"/other":                "*kisipar.StandardPage",
-		"/other.txt":            "*kisipar.StandardFile",
-		"/foo/bar":              "*kisipar.StandardPage",
-		"/foo/s.js":             "*kisipar.StandardFile",
-		"/foo/bar/baz":          "*kisipar.StandardPage",
-		"/foo/bother/data.json": "*kisipar.StandardFile",
-		"/foo/bother/boo/bam":   "*kisipar.StandardPage",
+		"/dupe":                 "*provider.StandardPage",
+		"/foo":                  "*provider.StandardPage",
+		"/index":                "*provider.StandardPage",
+		"/other":                "*provider.StandardPage",
+		"/other.txt":            "*provider.StandardFile",
+		"/foo/bar":              "*provider.StandardPage",
+		"/foo/s.js":             "*provider.StandardFile",
+		"/foo/bar/baz":          "*provider.StandardPage",
+		"/foo/bother/data.json": "*provider.StandardFile",
+		"/foo/bother/boo/bam":   "*provider.StandardPage",
 	}
 	for path, pt := range ptypes {
 		p, err := fsp.Get(path)
@@ -715,12 +715,12 @@ func Test_FileSystemProvider_LoadContent_Success_Exclude(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir: filepath.Join("testdata", "fsp-content"),
 		Exclude:    regexp.MustCompile("^foo/b|other.md"),
 	}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	assert.Nil(err, "no error")
@@ -745,12 +745,12 @@ func Test_FileSystemProvider_LoadContent_Success_Include(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir: filepath.Join("testdata", "fsp-content"),
 		Include:    regexp.MustCompile("[.](json|txt)$"),
 	}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	assert.Nil(err, "no error")
@@ -775,13 +775,13 @@ func Test_FileSystemProvider_LoadContent_Success_ExcludeInclude(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir: filepath.Join("testdata", "fsp-content"),
 		Exclude:    regexp.MustCompile("^other"),
 		Include:    regexp.MustCompile("[.](json|txt)$"),
 	}
 
-	fsp := kisipar.NewFileSystemProvider(config)
+	fsp := provider.NewFileSystemProvider(config)
 
 	err := fsp.LoadContent()
 	assert.Nil(err, "no error")
@@ -806,12 +806,12 @@ func Test_LoadFileSystemProvider_TemplateError(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir:  filepath.Join("testdata", "fsp-content"),
 		TemplateDir: filepath.Join("testdata", "fsp-bad-templates"),
 	}
 
-	_, err := kisipar.LoadFileSystemProvider(config)
+	_, err := provider.LoadFileSystemProvider(config)
 
 	if assert.Error(err) {
 		assert.Regexp("^Error walking .*broken.html", err.Error())
@@ -822,12 +822,12 @@ func Test_LoadFileSystemProvider_ContentError(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir:  filepath.Join("testdata", "fsp-bad-content"),
 		TemplateDir: filepath.Join("testdata", "fsp-templates"),
 	}
 
-	_, err := kisipar.LoadFileSystemProvider(config)
+	_, err := provider.LoadFileSystemProvider(config)
 
 	if assert.Error(err) {
 		assert.Regexp("^Error walking .*bad-yaml.md.*yaml", err.Error())
@@ -838,12 +838,12 @@ func Test_LoadFileSystemProvider_TemplateThemeError(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir:    filepath.Join("testdata", "fsp-bad-content"),
 		TemplateTheme: "nonesuch",
 	}
 
-	_, err := kisipar.LoadFileSystemProvider(config)
+	_, err := provider.LoadFileSystemProvider(config)
 
 	if assert.Error(err) {
 		assert.Equal("No templates available for theme nonesuch.", err.Error(),
@@ -855,12 +855,12 @@ func Test_LoadFileSystemProvider_Success(t *testing.T) {
 
 	assert := assert.New(t)
 
-	config := &kisipar.FileSystemProviderConfig{
+	config := &provider.FileSystemProviderConfig{
 		ContentDir:  filepath.Join("testdata", "fsp-content"),
 		TemplateDir: filepath.Join("testdata", "fsp-templates"),
 	}
 
-	fsp, err := kisipar.LoadFileSystemProvider(config)
+	fsp, err := provider.LoadFileSystemProvider(config)
 
 	assert.Nil(err, "no error")
 

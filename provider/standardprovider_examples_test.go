@@ -1,16 +1,16 @@
 // standardprovider_examples_test.go
 
-package kisipar_test
+package provider_test
 
 import (
 	"fmt"
 
-	"github.com/biztos/kisipar"
+	"github.com/biztos/kisipar/provider"
 )
 
 func ExampleStandardProvider() {
 
-	ds, err := kisipar.StandardProviderFromYAML("# nothing yet")
+	ds, err := provider.StandardProviderFromYAML("# nothing yet")
 	if err != nil {
 		fmt.Println(err.Error())
 	}

@@ -28,7 +28,9 @@ So the `FSP` does:
     * Want to have a configurable list of ordered types.
     * I guess you can require `.any` to be included.
 
-    
+
+`GetStub()` -- is there a use-case for this at all?  Fetch ONE stub? Why?
+
 Can't do `s.Provider.TemplateForPath(path)` because that's the same logic we
 use for pages.
 

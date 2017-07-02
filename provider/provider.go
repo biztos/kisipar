@@ -1,7 +1,10 @@
 // provider.go -- the Provider interface et al.
 // -----------
 
-package kisipar
+// Package provider defines the content-providing interfaces and standard
+// implementations for the Kisipar web server.  For more information see
+// https://github.com/biztos/kisipar
+package provider
 
 import (
 	"errors"
@@ -21,8 +24,14 @@ var (
 )
 
 // IsNotExist returns true if err matches ErrNotExist or certain other known
-// errors that may be passed through from the DataSource.
+// errors that may be passed through from the DataSource, including any
+// PathError with a Code of 404.
 func IsNotExist(err error) bool {
+	if perr, ok := err.(PathError); ok {
+		if perr.Code() == http.StatusNotFound {
+			return true
+		}
+	}
 	if err == ErrNotExist {
 		return true
 	}
@@ -35,6 +44,10 @@ func IsNotExist(err error) bool {
 // Provider provides items of any type that correspond to request paths.
 // It may also provide templates.
 //
+// Fetching methods return a Pather or a PathError; the PathError contains
+// sufficient information to serve an error page to the client, and is also
+// a standard error if that is needed.
+//
 // TODO: the following can't be gauranteed so maybe a SortedStubs method
 // to make a copy of the array and sort it?
 //   Slices returned from batch requests
@@ -45,17 +58,20 @@ type Provider interface {
 	String() string // For logging / debugging.
 
 	// Single requests:
-	Get(string) (Pather, error)                 // Fetch item at path.
-	GetSince(string, time.Time) (Pather, error) // If-Modified-Since.
-	GetStub(string) (Stub, error)               // If one Stub needed.
+	Get(string) (Pather, PathError)                 // Fetch item at path.
+	GetSince(string, time.Time) (Pather, PathError) // If-Modified-Since.
+	GetStub(string) (Stub, PathError)               // If one Stub needed.
 
 	// Batch requests:
-	GetStubs(prefix string) []Stub // Fetch Stubs under a prefix.
-	GetAll(prefix string) []Pather // Fetch Stubs or raw items.
+	GetStubs(prefix string) []Stub         // Fetch Stubs under a prefix.
+	GetPageStubs(prefix string) []PageStub // Fetch Page Stubs under a prefix.
+	GetPages(prefix string) []Page         // Fetch Pages under a prefix.
+	GetAll(prefix string) []Pather         // Fetch everything under a prefix.
 
 	// TODO:
 	// GetTagged
 	// Find  (with any interface)
+	// GetPages
 	// ...?
 
 	// Templates:
@@ -72,7 +88,7 @@ type Pather interface {
 }
 
 // Stubber is the interface for generating a Stub from an item within a
-// Provider.
+// Provider. It is often used in GetStubs and GetPageStubs implementations.
 type Stubber interface {
 	Stub() Stub
 }
@@ -112,6 +128,17 @@ type PathHandler interface {
 	Func() func(http.ResponseWriter, *http.Request)
 }
 
+// PathError defines an error response that may be handled more gracefully
+// than a generic error.  It also implements the standard error interface.
+type PathError interface {
+	Path() string          // The path of the item.
+	Code() int             // The HTTP error code number, e.g. 404
+	Message() string       // The minimal HTTP error message, e.g. "Not Found"
+	PublicDetail() string  // Any detail to show publicly.
+	PrivateDetail() string // Any detail to show privately, e.g. in logs.
+	Error() string         // Implements the error interface.
+}
+
 // Page is a single content page renderable as an HTML fragment in a template.
 // A Page may (and often will) provide many more methods for use in templates;
 // the interface defines the minimum required set used by default templates
@@ -131,22 +158,16 @@ type Page interface {
 // Stub is included exclusively in lists (including lists of one).  The
 // template should have an expection of what sort of items will be stubbed
 // for a given list, as the Stub will normally provide additional methods
-// useful in a listing items.
+// useful in listing items.
 type Stub interface {
 	Path() string       // Request path for Pather interface.
-	IsPageStub() bool   // True if it's really the stub of a Page.
 	TypeString() string // Type as string, useful to templates.
 }
 
 // PageStub is a more detailed Stub, to be used for Pages. In practice this
-// is usually implemented as an alias to the page type. A PageStub may be
-// used for non-Page types that provide page-like metadata and content, e.g.
-// images or map entries. The IsPageStub method should return true if the
-// PageStub is backing a traditional Page, and should be trusted over
-// interface checks.
-//
-// TODO: consider ditching IsPageStub in favor of something else, like maybe
-// HasPage or IsTruePage in order to avoid confusion.
+// is usually implemented as an alias to the page type, but in implementations
+// where returning the full page content in a list would be wasteful it may
+// be implemented directly.
 type PageStub interface {
 	Path() string                 // Request path for Pather interface.
 	Title() string                // Title of the Page.

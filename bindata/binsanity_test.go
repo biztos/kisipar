@@ -2,17 +2,17 @@
 //
 // More info: https://github.com/biztos/binsanity
 
-package kisipar_test
+package bindata_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/biztos/kisipar"
+	"github.com/biztos/kisipar/bindata"
 )
 
 func TestAssetNames(t *testing.T) {
-	names := kisipar.AssetNames()
+	names := bindata.AssetNames()
 	t.Log(names)
 }
 
@@ -20,7 +20,7 @@ func TestAsset(t *testing.T) {
 
 	// Not found:
 	missing := "---* no such asset we certainly hope *---"
-	_, err := kisipar.Asset(missing)
+	_, err := bindata.Asset(missing)
 	if err == nil {
 		t.Fatal("No error for missing asset.")
 	}
@@ -29,10 +29,10 @@ func TestAsset(t *testing.T) {
 	}
 
 	// Found (each one):
-	for _, name := range kisipar.AssetNames() {
+	for _, name := range bindata.AssetNames() {
 		// NOTE: it would be nice to test the non-zero sizes but it's possible
 		// to have empty files, so...
-		_, err := kisipar.Asset(name)
+		_, err := bindata.Asset(name)
 		if err != nil {
 			t.Fatal(err.Error())
 		}
@@ -44,14 +44,14 @@ func TestMustAsset(t *testing.T) {
 	// Not found:
 	missing := "---* no such asset we certainly hope *---"
 	exp := "Asset ---* no such asset we certainly hope *--- not found"
-	panicky := func() { kisipar.MustAsset(missing) }
+	panicky := func() { bindata.MustAsset(missing) }
 	AssertPanicsWith(t, panicky, exp, "panic for not found")
 
 	// Found (each one):
-	for _, name := range kisipar.AssetNames() {
+	for _, name := range bindata.AssetNames() {
 		// NOTE: it would be nice to test the non-zero sizes but it's possible
 		// to have empty files, so...
-		_ = kisipar.MustAsset(name)
+		_ = bindata.MustAsset(name)
 	}
 }
 

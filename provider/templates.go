@@ -1,6 +1,6 @@
-// templates.go -- general template logic
+// templates.go -- kisipar templates for standard Providers.
 
-package kisipar
+package provider
 
 import (
 	"errors"
@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 
+	// Own stuff:
+	"github.com/biztos/kisipar/bindata"
 	"github.com/biztos/vebben"
 )
 
@@ -29,7 +31,7 @@ func FuncMap() template.FuncMap {
 // regardless of OS, otherwise this might break on Windows.
 func TemplateThemes() []string {
 	have := map[string]bool{}
-	for _, name := range AssetNames() {
+	for _, name := range bindata.AssetNames() {
 		if strings.HasPrefix(name, "templates/") {
 			ss := strings.Split(name, "/")
 			if len(ss) > 2 {
