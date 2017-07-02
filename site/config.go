@@ -49,5 +49,10 @@ func LoadConfig(file string) (*Config, error) {
 		// If we ever figure that out we can test for it.
 		cfg.Dir, _ = filepath.Abs(filepath.Dir(file))
 	}
+
+	if cfg.Provider == "" {
+		cfg.Provider = "filesystem"
+	}
+
 	return cfg, nil
 }

@@ -17,3 +17,23 @@
 //
 // https://github.com/biztos/kisipar
 package kisipar
+
+import (
+	"github.com/biztos/kisipar/site"
+)
+
+// NewSite returns a new site.Site initialized with the given config file,
+// or the first error encountered.
+func NewSite(file string) (*site.Site, error) {
+
+	cfg, err := site.LoadConfig(file)
+	if err != nil {
+		return nil, err
+	}
+	s, err := site.NewSite(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
