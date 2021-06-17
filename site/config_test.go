@@ -45,7 +45,7 @@ func Test_LoadConfig_ErrorBadYAML(t *testing.T) {
 
 	assert := assert.New(t)
 
-	file := filepath.Join("testdata", "broken-config.yaml")
+	file := filepath.Join("testdata", "config-broken.yaml")
 	_, err := site.LoadConfig(file)
 	if assert.Error(err) {
 		assert.False(os.IsNotExist(err), "error nota IsNotExist")
@@ -58,7 +58,7 @@ func Test_LoadConfig_Success(t *testing.T) {
 
 	assert := assert.New(t)
 
-	file := filepath.Join("testdata", "fsp-config.yaml")
+	file := filepath.Join("testdata", "config-good.yaml")
 	cfg, err := site.LoadConfig(file)
 	if !assert.Nil(err, "no error") {
 		t.Fatal(err)

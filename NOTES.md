@@ -1,5 +1,47 @@
 # KISIPAR NOTES
 
+## LATEST PROBLEM: COMPLEXITY!
+
+The code base is too complex, I'm losing track of what does what where.
+
+How can we simplify?
+
+    KEEP
+    
+    * GENERIC "PROVIDER" CONCEPT
+    * LOADING FMD PAGES
+    
+        what are the MVP pathers?
+        (what else to call them?)
+        
+        * File - serves file
+        * Page - page w/HTML etc.
+        * Content - raw content
+        * Handler - handles it by itself
+        
+        type check on these, decide what to do
+        
+        only Page has a template
+        
+        site knows about templates (generally not from same provider)
+        
+        
+        
+        type Item interface {
+            Path() string // normalized path, may not be lookup path
+        }
+        
+        
+    LOSE
+    
+    * COMPLEXITY IN INTERFACES
+    * YAML PAGES (DON'T NEED THEM FOR ANYTHING)
+    
+    
+    
+---
+ANNO...
+
     NO FUCKING ITERATORS FOR NOW
     
     LATEST PLAN:
