@@ -1,4 +1,4 @@
-# Kisipar: An ABANDONED Markdown-centric web server for small sites.
+# Kisipar: An UNFINISHED (and abandoned) Markdown-centric web server for small sites.
 
 This was a fun project and I rewrote it several times -- twice in Perl, thrice
 in Go, and even once in Javascript/nodejs. But in the end, I never quite got
