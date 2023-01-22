@@ -1,8 +1,0 @@
-# fsp-config.yaml -- working test config for a FileSystemProvider.
-port: 8080
-name: FSP Test Site
-owner: Kisipar
-provider: filesystem
-providerconfig:
-    templates: fsp-templates
-    content: fsp-content

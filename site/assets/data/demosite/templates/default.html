@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+    <head>
+        <title>{{ with .Page }}{{ .Title }} - {{ end }}{{ .Site.Name }}</title>
+        <style type="text/css">
+            body {
+                font-family: Georgia, serif;
+                text-align: center;
+            }
+            pre, code {
+                font-family: Menlo, monospace;
+                color: green;
+            }
+            h1,h2,h3 {
+                font-family: "Helvetica Neue", Helvetica, sans-serif;
+            }
+            #Page, #Pageset {
+                width: 600px;
+                text-align: left;
+                margin: 0px auto;
+            }
+            #Copyright {
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- can we keep comments? -->
+        {{ with .Page }}
+        <div id="Page">
+            {{ .Content }}
+        </div>
+        {{ end }}
+        {{ $site := .Site }}
+        {{ with $ps := .Pageset }}
+        <div id="Pageset">
+        <ul>
+        {{ range $p := $ps.ByPath }}
+            <li><a href="{{ $site.Href $p }}">{{ $p.Title }}</a></li>
+        {{ end }}
+        </ul>
+        </div>
+        {{ end }}
+        <div id="Copyright">
+            &copy; {{ .Now.Year }} 
+            {{ with .Page }}{{ .Author }}{{ else }}{{ .Site.Name }}{{ end }}
+        </div>
+    </body>
+</html>

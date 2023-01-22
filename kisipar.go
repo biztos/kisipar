@@ -1,39 +1,101 @@
-// kisipar.go -- kisipar top-level description.
+// kisipar.go
 // ----------
 
-// Package kisipar implements a general-purpose web server for
-// smallish websites.  It directly supports file-based web sites written
-// in Markdown as well as several more obscure use-cases; and it is designed
-// to be a useful content-delivery layer for more complex sites.
+// Package kisipar provides an opinionated web server for small(ish)
+// Markdown-based sites.  The API presented here allows for a standard
+// server to be run via the command subpackage cmd/kisipar, or through a
+// custom application.  Much deeper customization is possible using the
+// subpackages.
 //
-// This being the modern Interweb, opinions vary on what "smallish" means,
-// and benchmarks are TODO, but a normal-sized blog should easily fit.
+// It is STRONGLY recommended that you run any public-facing kisipar servers
+// behind a reverse-proxy web server such as Nginx: https://www.nginx.com
 //
-// A user's guide of sorts is available at:
+// For more information see https://github.com/biztos/kisipar
 //
-// https://kisipar.biztos.com/
+// Building the Server
 //
-// For more technical information please see the project page on GitHub:
+// The standard server should be sufficient for most intended purposes.
 //
-// https://github.com/biztos/kisipar
+//  go get github.com/biztos/kisipar
+//  go build github.com/biztos/kisipar/cmd/kisipar
+//  ./kisipar --help
+//
+// You may of course build a custom server in order to expand -- or contract
+// -- the Kisipar functionality.
+//
+// Site Configuration
+//
+// The configuration file is in YAML format, must be named "config.yaml" and
+// lives at the top of the site directory.
+//
+// Site Layout
+//
+// A standard Kisipar site is contained in a directory, with a YAML
+// configuration file and three subdirectories:
+//
+//   config.yaml
+//   pages/
+//   static/
+//   templates/
+//
+// Static assets override pages.  Templates are go-style (html/template).
 package kisipar
 
 import (
+	"errors"
+	"fmt"
+	"log"
+
 	"github.com/biztos/kisipar/site"
 )
 
-// NewSite returns a new site.Site initialized with the given config file,
-// or the first error encountered.
-func NewSite(file string) (*site.Site, error) {
+// LAUNCH_SERVERS controls whether to actually launch the site servers; set to
+// false for testing without spawning listeners.
+var LAUNCH_SERVERS = true
 
-	cfg, err := site.LoadConfig(file)
-	if err != nil {
-		return nil, err
+// Kisipar represents a set of one or more Sites to serve.
+type Kisipar struct {
+	Sites []*site.Site
+}
+
+// Load initializes a Kisipar struct with sites loaded from the  directories
+// located at the given paths.  Each site must have its own config file.
+func Load(paths ...string) (*Kisipar, error) {
+	if len(paths) == 0 {
+		return nil, errors.New("kisipar.Load requires at least one site path.")
 	}
-	s, err := site.NewSite(cfg)
-	if err != nil {
-		return nil, err
+	portPaths := map[int]string{}
+	sites := make([]*site.Site, len(paths))
+	for i, path := range paths {
+		site, err := site.Load(path)
+		if err != nil {
+			return nil, fmt.Errorf("Site error at %s: %s", path, err)
+		}
+		if pp := portPaths[site.Port]; pp != "" {
+			return nil, fmt.Errorf("Duplicate Port %d: %s vs. %s",
+				site.Port, pp, path)
+		}
+		portPaths[site.Port] = path
+		sites[i] = site
+	}
+	return &Kisipar{Sites: sites}, nil
+}
+
+// Serve launches listen-and-serve routines for all Sites, with or without
+// TLS as per the configuration.  The last site in the list will block until
+// it is finished.
+func (k *Kisipar) Serve() {
+
+	final := len(k.Sites) - 1
+	for i, s := range k.Sites {
+		log.Printf("%s: listening on port %d.", s.Name, s.Port)
+		if LAUNCH_SERVERS {
+			if i == final {
+				log.Printf("%s (port %d): %s\n", s.Name, s.Port, s.Serve())
+			} else {
+				go log.Printf("%s (port %d): %s\n", s.Name, s.Port, s.Serve())
+			}
+		}
 	}
 
-	return s, nil
 }

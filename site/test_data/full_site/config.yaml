@@ -1,0 +1,8 @@
+# Test Site (full, standard config)
+Name: Testing Kisipar
+Owner: Fjørd Préfekt
+BaseURL: https://testing-kisipar.biztos.com/
+
+# Server Tuning (within reason):
+ReadTimeout: 600 # seconds
+WriteTimeout: 300 # seconds

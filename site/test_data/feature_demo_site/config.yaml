@@ -1,0 +1,6 @@
+# Feature Demo Site - a live test of Kisipar features.
+# -----------------
+# This is the config file: config.yaml
+
+Name: Kisipar Feature Demo
+ServePageSources: true

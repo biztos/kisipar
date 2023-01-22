@@ -1,41 +1,105 @@
-// main_test.go -- because main wants 100% test coverage too.
+// main_test.go - attempts at testing the kisipar command
+// ------------
+// Or, an attempt at getting proper test coverage by overriding os.Exit.
 //
-// (Seriously? Seriously. Design for testing.)
-//
-// IDEA: get the main stuff into a reusable package somewhere *else* so we can
-// do this with all cmd/* binaries the same way.  Maybe call it "futo" or
-// something.
+// NOTE: not using assert here as this may turn into a blog post; stdlib only!
 
 package main
 
 import (
 	"bytes"
+	"log"
+	"os"
+	"path/filepath"
+	"regexp"
 	"testing"
+
+	"github.com/biztos/kisipar"
 )
 
-func TestMain(t *testing.T) {
+type testRecorder struct {
+	ExitCode  int
+	LogBuffer *bytes.Buffer
+	T         *testing.T
+}
 
-	// Rig up the fake io:
-	exited := -1
-	var sout bytes.Buffer
-	var serr bytes.Buffer
-	exit = func(c int) { exited = c }
-	stdout = &sout
-	stderr = &serr
-	args = []string{"program", "--version"}
+func (r *testRecorder) AssertExitedWith(code int) {
+	if r.ExitCode == -1 {
+		r.T.Errorf("Did not (apparently) exit; expected %d.", code)
+	} else if r.ExitCode != code {
+		r.T.Errorf("Exited with wrong code: expected %d, got %d",
+			code, r.ExitCode)
+	} else {
+		r.T.Logf("Exited with expected code: %d", code)
+	}
+}
 
-	// Run it in the simplest form possible:
+func (r *testRecorder) AssertLoggedRegexp(rs string) {
+	re := regexp.MustCompile(rs)
+	got := r.LogBuffer.String()
+	if re.MatchString(got) {
+		r.T.Logf("Log buffer correct:\n%s\nMatches: %s", got, rs)
+	} else {
+		r.T.Errorf("Log buffer incorrect.\n%s\nDoes not match: %s", got, rs)
+	}
+}
+
+func (r *testRecorder) AssertLoggedString(s string) {
+	got := r.LogBuffer.String()
+	if got != s {
+		r.T.Errorf("Log buffer incorrect.\nExp: '%s'\nGot: '%s'", s, got)
+	} else {
+		r.T.Logf("Log buffer correct: %s", s)
+	}
+}
+
+func (r *testRecorder) Exit(code int) {
+	r.ExitCode = code
+}
+
+func prepTestRecorder(t *testing.T) *testRecorder {
+	r := &testRecorder{
+		ExitCode:  -1,
+		LogBuffer: new(bytes.Buffer),
+		T:         t,
+	}
+	kisipar.LAUNCH_SERVERS = false // pending a better idea...
+	log.SetOutput(r.LogBuffer)
+	log.SetFlags(0)
+	EXIT_FUNCTION = r.Exit
+
+	return r
+}
+
+func Test_BadPath(t *testing.T) {
+
+	r := prepTestRecorder(t)
+
+	os.Args = []string{
+		"kisipar",                     // the binary (ignored here)
+		"no-such-path-here-we-assume", // our test site path (nonexistent)
+	}
 	main()
 
-	// Check our results, just to be thorough:
-	if exited != 0 {
-		t.Fatal("nonzero exit for --version")
-	}
-	if out := serr.String(); out != "" {
-		t.Fatalf("wrote to stderr: %s", out)
-	}
-	if out := sout.String(); out != "binsanity version 0.1.0\n" {
-		t.Fatalf("wrote wrong output to stdout: %s", out)
-	}
+	r.AssertExitedWith(1)
+	r.AssertLoggedRegexp("^Site error.*no such file or directory")
 
+}
+
+func Test_Success(t *testing.T) {
+
+	r := prepTestRecorder(t)
+
+	// We have a minimal test site handy:
+	path := filepath.Join("test_data", "site_1")
+
+	// The call is thus:
+	os.Args = []string{
+		"kisipar", // the binary (ignored here)
+		path,      // our test site path
+	}
+	main()
+
+	r.AssertExitedWith(0)
+	r.AssertLoggedString("Test Site One: listening on port 8081.\n")
 }

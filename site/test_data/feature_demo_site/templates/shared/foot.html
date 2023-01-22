@@ -1,0 +1,7 @@
+{{/* shared/foot */}}
+        <div id="Copyright">
+            &copy; {{ .Now.Year }} 
+            {{ with .Page.Author }}{{ . }}{{ else }}{{ .Site.Name }}{{ end }}
+        </div>
+    </body>
+</html>

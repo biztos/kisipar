@@ -1,0 +1,19 @@
+{{/* map - full site map via template.
+--------
+
+This might be interesting to modularize at some point.
+
+*/}}{{ template "shared/head" . }}
+    <div id="Content">
+        {{ .Page.Content }}
+    </div>
+    <div id="Pageset">
+    <ul>
+    {{ $site := .Site }}
+    {{ range $p := .Site.Pageset.ByPath }}
+        <li><a href="{{ $site.Href $p }}">{{ $p.Title }}</a></li>
+    {{ end }}
+    </ul>
+    </div>
+
+{{ template "shared/foot" . }}

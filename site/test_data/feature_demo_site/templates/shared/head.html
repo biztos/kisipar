@@ -1,0 +1,15 @@
+{{/* shared/head - start of a standard HTML page.
+----------------
+
+Invoke as:
+
+...eh, what?
+
+*/}}<!doctype html>
+<html>
+    <head>
+        <title>{{ with .Page }}{{ .Title }} - {{ end }}{{ .Site.Name }}</title>
+        <link rel="stylesheet" type="text/css" href="/kisipar.css">
+    </head>
+    <body>
+        <h1>{{ with .Page }}{{ .Title }} - {{ end }}{{ .Site.Name }}</h1>

@@ -1,0 +1,12 @@
+/* kisipar.css - standard, simple styles for a generic Kisipar web site.
+** -----------
+*/
+
+body {
+    font-family: Georgia, serif;
+    background: #ccccff;
+}
+code {
+    font-family: monospace;
+    color: green;
+}
